@@ -9,8 +9,7 @@ from pathlib import Path
 import sys
 
 import pandas as pd
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile, Query
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi import APIRouter, FastAPI, File, Form, HTTPException, Query, UploadFile
 
 from .config import (
     INFER_CSV,
@@ -25,16 +24,8 @@ from .config import (
     STATE_DIR,
 )
 
-app = FastAPI(title="ClarityCS UI API", version="0.2.0")
-app.add_middleware(
-    CORSMiddleware,
-    # Vite dev server may auto-increment ports (5173, 5174, 5175, ...).
-    # Allow localhost loopback origins on any port to prevent browser fetch failures.
-    allow_origin_regex=r"^https?://(localhost|127\.0\.0\.1)(:\d+)?$",
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+app = FastAPI(title="NullCS UI API", version="0.2.0")
+api = APIRouter(prefix="/api")
 
 _jobs_lock = threading.Lock()
 PIPELINE_STEPS = ["Uploading", "Parsing", "Feature Build", "Model", "Explanation"]
@@ -175,12 +166,24 @@ def _load_debug_trace(demo_id: str) -> dict:
     return {"path": str(debug_path), "trace": trace}
 
 
-@app.get("/health")
+@app.get("/")
+def root() -> dict:
+    return {
+        "name": "NullCS API",
+        "status": "ok",
+        "version": app.version,
+        "docs": "/docs",
+        "health": "/api/health",
+    }
+
+
+@api.get("/health")
 def health() -> dict:
-    return {"ok": True}
+    model_artifact = MODEL_ARTIFACT or "xgb_player_level_gridcv.json"
+    return {"status": "ok", "version": app.version, "model_artifact": model_artifact}
 
 
-@app.post("/upload-demo")
+@api.post("/upload-demo")
 async def upload_demo(file: UploadFile = File(...), demo_id: str | None = Form(default=None)) -> dict:
     demo_id = (demo_id or "").strip() or _demo_id()
     if not str(file.filename or "").lower().endswith(".dem"):
@@ -194,7 +197,7 @@ async def upload_demo(file: UploadFile = File(...), demo_id: str | None = Form(d
     return {"demo_id": demo_id}
 
 
-@app.post("/demo/{demo_id}/run")
+@api.post("/demo/{demo_id}/run")
 def run_demo(demo_id: str) -> dict:
     dem_path = _ensure_demo_dem_path(demo_id)
     cur = _get_job(demo_id) or {}
@@ -206,7 +209,7 @@ def run_demo(demo_id: str) -> dict:
     return {"demo_id": demo_id, "state": "queued"}
 
 
-@app.get("/demo/{demo_id}/status")
+@api.get("/demo/{demo_id}/status")
 def demo_status(demo_id: str) -> dict:
     cur = _get_job(demo_id)
     if not cur:
@@ -250,7 +253,7 @@ def _parse_top_reasons(val) -> list[dict]:
     return []
 
 
-@app.get("/demo/{demo_id}/players")
+@api.get("/demo/{demo_id}/players")
 def demo_players(demo_id: str, debug: int = Query(default=0)) -> dict:
     if not INFER_CSV.exists():
         raise HTTPException(status_code=404, detail=f"Inference CSV not found: {INFER_CSV}")
@@ -296,7 +299,7 @@ def demo_players(demo_id: str, debug: int = Query(default=0)) -> dict:
     return resp
 
 
-@app.get("/demo/{demo_id}/player/{steamid}/score-trace")
+@api.get("/demo/{demo_id}/player/{steamid}/score-trace")
 def player_score_trace(demo_id: str, steamid: str) -> dict:
     loaded = _load_debug_trace(demo_id)
     trace = loaded["trace"]
@@ -312,7 +315,7 @@ def player_score_trace(demo_id: str, steamid: str) -> dict:
     return {"demo_id": demo_id, "steamid": s, "debug_path": loaded["path"], "trace": hit}
 
 
-@app.post("/demo/{demo_id}/player/{steamid}/explain")
+@api.post("/demo/{demo_id}/player/{steamid}/explain")
 def explain_player(demo_id: str, steamid: str) -> dict:
     log_dir = REPORTS_DIR / demo_id / "logs"
     log_dir.mkdir(parents=True, exist_ok=True)
@@ -342,7 +345,7 @@ def explain_player(demo_id: str, steamid: str) -> dict:
     }
 
 
-@app.get("/api/explain")
+@api.get("/explain")
 def api_explain(
     demo_id: str = Query(...),
     steamid: str = Query(...),
@@ -380,7 +383,7 @@ def api_explain(
         raise HTTPException(status_code=500, detail=f"Failed to parse report.json: {e}") from e
 
 
-@app.get("/demo/{demo_id}/player/{steamid}/report/files")
+@api.get("/demo/{demo_id}/player/{steamid}/report/files")
 def player_report_files(demo_id: str, steamid: str) -> dict:
     out_dir = _safe_report_dir(demo_id, steamid)
     if not out_dir.exists():
@@ -396,7 +399,7 @@ def player_report_files(demo_id: str, steamid: str) -> dict:
     }
 
 
-@app.get("/demo/{demo_id}/player/{steamid}/report/reasons")
+@api.get("/demo/{demo_id}/player/{steamid}/report/reasons")
 def player_report_reasons(demo_id: str, steamid: str) -> dict:
     out_dir = _safe_report_dir(demo_id, steamid)
     reasons_path = out_dir / "reasons.json"
@@ -411,7 +414,7 @@ def player_report_reasons(demo_id: str, steamid: str) -> dict:
     return {"demo_id": demo_id, "steamid": steamid, "reasons": reasons}
 
 
-@app.get("/demo/{demo_id}/player/{steamid}/report/evidence/{filename}")
+@api.get("/demo/{demo_id}/player/{steamid}/report/evidence/{filename}")
 def player_report_evidence(demo_id: str, steamid: str, filename: str, limit: int = 500) -> dict:
     path = _safe_evidence_path(demo_id, steamid, filename)
     try:
@@ -432,7 +435,7 @@ def player_report_evidence(demo_id: str, steamid: str, filename: str, limit: int
     }
 
 
-@app.get("/demo/{demo_id}/player/{steamid}/report")
+@api.get("/demo/{demo_id}/player/{steamid}/report")
 def player_report(demo_id: str, steamid: str) -> dict:
     out_dir = _safe_report_dir(demo_id, steamid)
     if not out_dir.exists():
@@ -451,3 +454,6 @@ def player_report(demo_id: str, steamid: str) -> dict:
             }
         )
     return {"demo_id": demo_id, "steamid": steamid, "report_dir": str(out_dir), "reasons": reasons, "evidence": evidence}
+
+
+app.include_router(api)

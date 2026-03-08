@@ -44,7 +44,10 @@ main/data/processed/models/**
 
 # Secrets and env
 .env
+.env.local
 .env.*
+!.env.example
+!main/ui/web/.env.example
 *.key
 *.pem
 *.token
@@ -60,5 +63,12 @@ node_modules/
 main/ui/web/dist/
 main/ui/web/.vite/
 main/ui/web/*.log
+*.log
+logs/
+**/logs/
 main/ui/web/tsconfig.tsbuildinfo
 main/ui/api/state/*.json
+
+# UI demo artifacts
+main/data/raw_uploads/
+main/ui/web/.env.local

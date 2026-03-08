@@ -1,4 +1,10 @@
-const API_BASE = import.meta.env.VITE_API_BASE || "http://127.0.0.1:8000";
+import { API_BASE_URL } from "../config";
+
+const apiBase = API_BASE_URL.replace(/\/+$/, "");
+
+function apiUrl(path: string): string {
+  return `${apiBase}${path.startsWith("/") ? path : `/${path}`}`;
+}
 
 export type PlayerRow = {
   steamid: string;
@@ -70,14 +76,12 @@ export type EvidenceTable = {
   row_count: number;
 };
 
-async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
+async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
   let r: Response;
   try {
-    r = await fetch(url, init);
+    r = await fetch(apiUrl(path), init);
   } catch (err) {
-    throw new Error(
-      `Network request failed. Check that backend is running on ${API_BASE} and CORS allows this frontend origin. Original error: ${String(err)}`
-    );
+    throw new Error(`Network request failed. API base is "${apiBase}". Original error: ${String(err)}`);
   }
   if (!r.ok) throw new Error(await r.text());
   return r.json() as Promise<T>;
@@ -87,51 +91,48 @@ export async function uploadDemo(file: File, demoId?: string) {
   const fd = new FormData();
   fd.append("file", file);
   if (demoId) fd.append("demo_id", demoId);
-  return fetchJson<{ demo_id: string }>(`${API_BASE}/upload-demo`, { method: "POST", body: fd });
+  return fetchJson<{ demo_id: string }>("/upload-demo", { method: "POST", body: fd });
 }
 
 export async function runDemo(demoId: string) {
-  return fetchJson<{ demo_id: string; state: string }>(`${API_BASE}/demo/${demoId}/run`, { method: "POST" });
+  return fetchJson<{ demo_id: string; state: string }>(`/demo/${demoId}/run`, { method: "POST" });
 }
 
 export async function getStatus(demoId: string) {
-  return fetchJson<DemoStatus>(`${API_BASE}/demo/${demoId}/status`);
+  return fetchJson<DemoStatus>(`/demo/${demoId}/status`);
 }
 
 export async function getPlayers(demoId: string): Promise<{ demo_id: string; players: PlayerRow[] }> {
-  return fetchJson<{ demo_id: string; players: PlayerRow[] }>(`${API_BASE}/demo/${demoId}/players`);
+  return fetchJson<{ demo_id: string; players: PlayerRow[] }>(`/demo/${demoId}/players`);
 }
 
 export async function getPlayersDebug(demoId: string): Promise<{ demo_id: string; players: PlayerRow[]; debug?: { enabled: boolean; path: string; trace: { players?: ScoreTrace[] } } }> {
   return fetchJson<{ demo_id: string; players: PlayerRow[]; debug?: { enabled: boolean; path: string; trace: { players?: ScoreTrace[] } } }>(
-    `${API_BASE}/demo/${demoId}/players?debug=1`
+    `/demo/${demoId}/players?debug=1`
   );
 }
 
 export async function getPlayerScoreTrace(demoId: string, steamid: string) {
   return fetchJson<{ demo_id: string; steamid: string; debug_path: string; trace: ScoreTrace }>(
-    `${API_BASE}/demo/${demoId}/player/${steamid}/score-trace`
+    `/demo/${demoId}/player/${steamid}/score-trace`
   );
 }
 
 export async function explainPlayer(demoId: string, steamid: string) {
-  return fetchJson<{ demo_id: string; steamid: string; evidence_files: string[] }>(
-    `${API_BASE}/demo/${demoId}/player/${steamid}/explain`,
-    { method: "POST" }
-  );
+  return fetchJson<{ demo_id: string; steamid: string; evidence_files: string[] }>(`/demo/${demoId}/player/${steamid}/explain`, {
+    method: "POST",
+  });
 }
 
 export async function getReportFiles(demoId: string, steamid: string) {
-  return fetchJson<ReportFiles>(`${API_BASE}/demo/${demoId}/player/${steamid}/report/files`);
+  return fetchJson<ReportFiles>(`/demo/${demoId}/player/${steamid}/report/files`);
 }
 
 export async function getReasons(demoId: string, steamid: string) {
-  return fetchJson<{ demo_id: string; steamid: string; reasons: Reason[] }>(
-    `${API_BASE}/demo/${demoId}/player/${steamid}/report/reasons`
-  );
+  return fetchJson<{ demo_id: string; steamid: string; reasons: Reason[] }>(`/demo/${demoId}/player/${steamid}/report/reasons`);
 }
 
 export async function getEvidenceTable(demoId: string, steamid: string, filename: string, limit = 500) {
   const safeName = encodeURIComponent(filename);
-  return fetchJson<EvidenceTable>(`${API_BASE}/demo/${demoId}/player/${steamid}/report/evidence/${safeName}?limit=${limit}`);
+  return fetchJson<EvidenceTable>(`/demo/${demoId}/player/${steamid}/report/evidence/${safeName}?limit=${limit}`);
 }

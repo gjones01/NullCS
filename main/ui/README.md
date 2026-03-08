@@ -42,25 +42,31 @@ From repo root:
 ```powershell
 cd main/ui/web
 npm install
-npm run dev
+npm run dev -- --host 0.0.0.0 --port 5173
 ```
 
-Frontend defaults to API base `http://127.0.0.1:8000`.
-Override with:
+Use your Network URL (for example, `http://192.168.x.x:5173`) instead of localhost.
+Open the Network URL printed by Vite.
+
+Frontend API base defaults to `/api`.
+Override with `.env.local`:
 
 ```powershell
-$env:VITE_API_BASE="http://127.0.0.1:8000"
-npm run dev
+Set-Content -Path .env.local -Value "VITE_API_BASE_URL=/api"
 ```
+
+Vite dev server proxies `/api` to `http://127.0.0.1:8000` (configured in `main/ui/web/vite.config.ts`), so browser requests remain same-origin in dev and CORS is not needed for the UI flow.
 
 ## API Endpoints
 
-- `POST /upload-demo` form-data file upload (`.dem`) and optional `demo_id`
-- `POST /demo/{demo_id}/run` run inference pipeline in background
-- `GET /demo/{demo_id}/status` job state + log tail
-- `GET /demo/{demo_id}/players` players from infer CSV
-- `POST /demo/{demo_id}/player/{steamid}/explain` run explain script (`--mode infer`)
-- `GET /demo/{demo_id}/player/{steamid}/report` reasons + evidence CSV previews
+- `GET /` API banner/health summary
+- `GET /api/health` service health + version + model artifact
+- `POST /api/upload-demo` form-data file upload (`.dem`) and optional `demo_id`
+- `POST /api/demo/{demo_id}/run` run inference pipeline in background
+- `GET /api/demo/{demo_id}/status` job state + log tail
+- `GET /api/demo/{demo_id}/players` players from infer CSV
+- `POST /api/demo/{demo_id}/player/{steamid}/explain` run explain script (`--mode infer`)
+- `GET /api/demo/{demo_id}/player/{steamid}/report` reasons + evidence CSV previews
 
 ## Outputs
 

@@ -13,7 +13,8 @@ import {
   getStatus,
   runDemo,
   uploadDemo,
-} from "./api";
+} from "./lib/api";
+import { APP_CONFIG } from "./config";
 import { EvidenceTabs } from "./components/EvidenceTabs";
 import { ForensicBackground } from "./components/ForensicBackground";
 import { ProcessingOverlay } from "./components/ProcessingOverlay";
@@ -150,7 +151,7 @@ export default function App() {
         <header className="glass-panel flex flex-wrap items-center justify-between gap-3 p-4 md:p-5">
           <div>
             <motion.h1 initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="text-2xl font-semibold tracking-[0.24em] text-white md:text-3xl">
-              NULLCS
+              {APP_CONFIG.appName.toUpperCase()}
             </motion.h1>
             <p className="mt-1 text-xs tracking-[0.08em] text-slate-300">See the Unseen: AI-Powered Integrity in Every Match</p>
           </div>
@@ -177,7 +178,7 @@ export default function App() {
             </div>
 
             <article className="glass-panel w-full max-w-3xl p-5">
-              <h2 className="mb-2 text-sm uppercase tracking-[0.16em] text-slate-300">About NullCS</h2>
+              <h2 className="mb-2 text-sm uppercase tracking-[0.16em] text-slate-300">About {APP_CONFIG.appName}</h2>
               <p className="text-sm leading-relaxed text-slate-200">
                 NullCS is a passion project and proof-of-concept focused on surfacing suspicious gameplay patterns from demo data.
               </p>

@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { useMemo } from "react";
-import type { Reason } from "../api";
+import type { Reason } from "../lib/api";
 
 const severityClass: Record<string, string> = {
   low: "bg-slate-600/70 text-slate-100",

@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import type { EvidenceTable } from "../api";
+import type { EvidenceTable } from "../lib/api";
 
 const preferredColumns = ["round_num", "kill_tick", "victim_name", "weapon", "rt_ticks", "is_prefire", "is_thrusmoke", "headshot"];
 
