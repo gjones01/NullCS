@@ -1,23 +1,21 @@
 # NullCS
 
-Evidence-first demo analysis UI and pipeline for CS demo forensics research.
+NullCS is a Counter-Strike demo review pipeline with:
 
-## Prerequisites
+- local/private inference for full analysis
+- a public-safe web UI path for demo-mode deployments
+- an encounter-model branch that now includes a temporal CNN baseline for stacked player scoring
 
-- Python 3.10+ with `python`/`pip` on PATH
-- Node.js 18+ with `npm` on PATH
-- Git
+## Local Development
 
-## Quickstart (Backend + Frontend)
-
-From repo root:
+Backend:
 
 ```powershell
 python -m pip install -r main/ui/api/requirements.txt
 python -m uvicorn main.ui.api.main:app --host 127.0.0.1 --port 8000 --reload
 ```
 
-In a second terminal:
+Frontend:
 
 ```powershell
 cd main/ui/web
@@ -25,39 +23,16 @@ npm install
 npm run dev -- --host 0.0.0.0 --port 5173
 ```
 
-Use your Network URL (for example, `http://192.168.x.x:5173`) instead of localhost.
-Open the Network URL printed by Vite.
+## Key Docs
 
-## Frontend Env
+- Security policy: `SECURITY.md`
+- Security controls summary: `docs/security.md`
+- Deployment guide: `docs/deployment.md`
+- UI details: `main/ui/README.md`
+- Temporal CNN experiment notes: `docs/cnn_experiments.md`
 
-Frontend API base is configured via `main/ui/web/.env.local`:
+## Public Repo Rules
 
-```dotenv
-VITE_API_BASE_URL=/api
-```
-
-Copy from `main/ui/web/.env.example`.
-
-## Dev Proxy
-
-Vite proxies `/api` to `http://127.0.0.1:8000`, so the browser stays on the frontend origin.
-CORS is not required in local dev when using this proxy.
-
-## Convenience Script
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\run_dev.ps1
-```
-
-Add `-StartTerminals` to open backend/frontend terminals automatically.
-
-## Smoke Test
-
-```powershell
-powershell -ExecutionPolicy Bypass -File main/scripts/smoke_ui_pipeline.ps1 -DemoPath "<path-to-demo.dem>"
-```
-
-## Docs
-
-- UI/API details: `main/ui/README.md`
-- Dev setup + change summary: `docs/dev_setup.md`
+- Do not commit raw demos, datasets, processed outputs, model binaries, reports, logs, or secrets.
+- Public deployments should use demo mode only.
+- Full inference, uploads, and model artifacts should remain local or on a private backend.

@@ -1,6 +1,8 @@
 # Large/raw/demo data
 huggfacedata/
+huggingfacedata/
 *.dem
+*.parquet
 raw_zips/
 parsed_zips/
 processed/
@@ -19,6 +21,12 @@ legit_baseline_outputs/
 tris/
 *.zip
 *.png
+!docs/assets/
+!docs/assets/**
+!docs/assets/plots/
+!docs/assets/plots/*.png
+!main/ui/web/public/
+!main/ui/web/public/*.png
 
 # Processed artifacts and reports
 main/data/**
@@ -41,6 +49,7 @@ main/data/processed/models/**
 *.onnx
 *.bin
 *.pt
+*.jsonl
 
 # Secrets and env
 .env
@@ -68,7 +77,10 @@ logs/
 **/logs/
 main/ui/web/tsconfig.tsbuildinfo
 main/ui/api/state/*.json
+main/ui/api/state/
 
 # UI demo artifacts
 main/data/raw_uploads/
 main/ui/web/.env.local
+NOTES_STATUS.md
+REPO_MAP.md
