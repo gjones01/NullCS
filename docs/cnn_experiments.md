@@ -8,9 +8,17 @@ This repo now includes an encounter-level temporal CNN baseline that scores figh
 - `main/src/models/encounter_nn.py` contains the temporal sequence model, preprocessing, aggregation, and inference scoring helpers
 - encounter-level scores can be merged back into player features as stacked features for the final player-level model
 
+## Current Status
+
+The temporal CNN path is working and useful for research iteration, but it is not the current champion model. The stronger current public-safe story is:
+
+- stacked encounter modeling matters
+- legit hard negatives matter
+- benchmark-driven evaluation matters more right now than blind architecture churn
+
 ## Why This Model Exists
 
-The player-level XGBoost model remains the top-level ranking model. The CNN sits underneath it and is intended to capture short temporal control patterns within individual encounters that are hard to preserve in aggregated tabular features alone.
+The player-level model remains the top-level ranking model. The CNN sits underneath it and is intended to capture short temporal control patterns within individual encounters that are hard to preserve in aggregated tabular features alone.
 
 Current structure:
 
