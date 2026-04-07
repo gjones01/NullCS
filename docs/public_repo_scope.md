@@ -17,16 +17,16 @@ The following categories are appropriate for the public repo:
 The following should remain out of the public repo:
 
 - raw demo files
-- uploaded match files
+- private match artifacts
 - processed local artifacts
 - report exports and evidence tables
 - model binaries and private training artifacts
-- desktop app packaging and private operational integration code
+- product packaging and private operational integration code
 - credentials, environment files, and local service state
 
-## Desktop App Policy
+## Research-Only Policy
 
-The desktop application is not part of the intended public GitHub presentation.
+The public GitHub presentation should stay focused on the research project rather than on local tooling or deployment mechanics.
 
 For the public repo, the emphasis should remain on:
 
@@ -35,7 +35,7 @@ For the public repo, the emphasis should remain on:
 - the modeling pipeline
 - public-safe plots and findings
 
-That keeps the GitHub presentation tighter and reduces accidental exposure of local-only operational codepaths.
+That keeps the GitHub presentation tighter and makes it easier for visitors to understand the actual research story.
 
 ## Documentation Standard
 
@@ -51,7 +51,7 @@ Public docs should not:
 
 - publish internal handoff notes
 - publish local environment guides tied to private data
-- publish desktop-integration debugging history
+- publish product-integration debugging history
 - publish sensitive implementation details that are unnecessary for understanding the research
 
 ## Repo Hygiene
@@ -65,4 +65,3 @@ Before pushing publicly, verify that the repo does not include:
 - one-off marketing assets that are not part of the repo story
 
 The public repo should read like a research codebase, not a local working dump.
-

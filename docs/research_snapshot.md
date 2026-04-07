@@ -77,6 +77,6 @@ The public repo stays aligned with the same core principles used throughout the 
 - public-safe benchmark summaries
 - conservative handling of sensitive data and implementation details
 
-## Desktop Beta Note
+## Public Repo Note
 
-The desktop application is being kept out of the public repo for now, but a desktop beta is planned for this summer. The public GitHub side is meant to show the research stack, benchmark behavior, and public-safe findings behind that product direction.
+This GitHub repo is meant to present the research stack, benchmark behavior, and public-safe findings only. Product packaging, local workflows, and private operational layers are intentionally kept out of scope here.

@@ -2,7 +2,7 @@
 
 NullCS is a machine learning research project for behavioral review in Counter-Strike demos.
 
-The project studies whether suspicious behavior can be surfaced from tick-level demo data in a way that is measurable, explainable, and conservative around false positives. The system is designed for match-relative triage and analyst review, not automated enforcement or one-click verdicts.
+The project studies whether suspicious behavior can be surfaced from tick-level demo data in a way that is measurable, explainable, and conservative around false positives. The system is built for match-relative triage and analyst review, not automated enforcement or one-click verdicts.
 
 ## Start Here
 
@@ -14,10 +14,8 @@ If you are visiting the repo for the first time, read these in order:
    What the modeling pipeline is actually trying to do
 3. `docs/benchmark_methodology.md`
    How to interpret the benchmark slices and why quiet legit/pro behavior matters
-4. `SECURITY.md`
-   Public-safe repo boundaries and what stays private
-
-The desktop application itself is not part of the public repo, but a desktop beta is planned for this summer.
+4. `docs/public_repo_scope.md`
+   What this public repo includes and what stays private
 
 ## What This Public Repo Covers
 
@@ -30,10 +28,10 @@ This repo is the public-safe research side of NullCS:
 
 This repo intentionally avoids shipping:
 
-- raw demos or uploaded match files
+- raw demos and private match artifacts
 - processed local artifacts and private datasets
 - model binaries and internal evidence exports
-- desktop app packaging and private operational codepaths
+- local product packaging and private operational codepaths
 
 ## Current Public-Safe Read
 
@@ -50,7 +48,7 @@ Public-safe benchmark summary:
 - pro stress-test median / mean top-ranked signal: `0.0073 / 0.0074`
 - suspicious benchmark top-1 / top-3 retrieval: `0.60 / 0.90`
 
-That is the right shape for a behavioral review system. The goal is not to call someone a cheater from one score. The goal is to surface the players who deserve deeper review while minimizing false positives on strong legitimate players.
+That is the shape you want from a behavioral review system. The goal is not to call someone a cheater from one score. The goal is to surface the players who deserve deeper review while minimizing false positives on strong legitimate players.
 
 See:
 
@@ -97,9 +95,6 @@ See:
 
 - `docs/public_repo_scope.md`
   What is intentionally public here and what is kept private
-
-- `SECURITY.md`
-  Public repo security and deployment boundaries
 
 ## Public Repo Rules
 
