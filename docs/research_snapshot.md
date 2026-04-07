@@ -20,6 +20,24 @@ The current benchmark picture is intentionally simple:
 
 This means the current system behaves more like a match-relative anomaly and review-priority layer than an absolute cheat-probability model.
 
+### Public-Safe Benchmark Numbers
+
+Current public-safe summary values:
+
+- suspicious benchmark median top-ranked signal: `0.748`
+- suspicious benchmark mean top-ranked signal: `0.654`
+- normal legit median top-ranked signal: `0.0073`
+- normal legit mean top-ranked signal: `0.0093`
+- pro stress-test median top-ranked signal: `0.0073`
+- pro stress-test mean top-ranked signal: `0.0074`
+
+High-level suspicious benchmark retrieval:
+
+- top-1 retrieval: `0.60`
+- top-3 retrieval: `0.90`
+
+These are match-relative triage outputs, not verdicts. The important shape is that suspicious slices stay much louder while legit and pro slices remain compressed near zero.
+
 ### Benchmark Slice Comparison
 
 ![Benchmark slice comparison](assets/plots/benchmark_slice_signals.png)
@@ -33,11 +51,7 @@ This means the current system behaves more like a match-relative anomaly and rev
 NullCS currently uses a player-level ranking model that can consume stacked encounter-level features. Two points matter:
 
 - the stacked encounter path is useful and improves retrieval stability on benchmark slices
-- the temporal CNN branch integrated successfully, but it is currently research infrastructure rather than the best-performing production candidate
-
-### Stacked Model Comparison
-
-![Stacked model comparison](assets/plots/stacked_model_comparison.png)
+- the temporal CNN branch integrated successfully, but it is currently research infrastructure rather than the best-performing public-facing candidate
 
 ## Public Framing
 
@@ -45,7 +59,6 @@ What this repo is comfortable showing publicly:
 
 - high-level benchmark slices
 - research progress
-- UI and workflow direction
 - restrained experiment summaries
 
 What stays private:

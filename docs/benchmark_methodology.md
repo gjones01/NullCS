@@ -68,6 +68,17 @@ The public repo focuses on simple, interpretable summaries such as:
 
 These summaries are enough to communicate the project direction without exposing private data, model artifacts, or sensitive operational details.
 
+### Current Public-Safe Summary
+
+At the time of writing, the public benchmark story is:
+
+- suspicious benchmark median / mean top-ranked signal: `0.748 / 0.654`
+- normal legit median / mean top-ranked signal: `0.0073 / 0.0093`
+- pro stress-test median / mean top-ranked signal: `0.0073 / 0.0074`
+- suspicious benchmark top-1 / top-3 retrieval: `0.60 / 0.90`
+
+These values are not presented as enforcement thresholds. They are compact evidence that the current stack is louder on suspicious benchmark cases while staying restrained on strong legitimate slices.
+
 ## Why Match-Relative Signals
 
 NullCS produces match-relative triage outputs.
@@ -106,6 +117,5 @@ The benchmark should be read like this:
 - suspicious benchmark slices should be visually and numerically louder
 - legit and pro slices should stay visually and numerically quiet
 - the project is strongest when both are true at once
-
 
 

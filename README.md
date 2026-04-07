@@ -14,6 +14,8 @@ If you are visiting the repo for the first time, read these in order:
    What the modeling pipeline is actually trying to do
 3. `docs/benchmark_methodology.md`
    How to interpret the benchmark slices and why quiet legit/pro behavior matters
+4. `SECURITY.md`
+   Public-safe repo boundaries and what stays private
 
 The desktop application itself is not part of the public repo, but a desktop beta is planned for this summer.
 
@@ -40,6 +42,13 @@ The strongest current high-level benchmark story is:
 - suspicious benchmark cases surface clearly at the top of the lobby
 - held-out normal legit demos stay very quiet
 - pro stress-test demos also stay quiet
+
+Public-safe benchmark summary:
+
+- suspicious benchmark median / mean top-ranked signal: `0.748 / 0.654`
+- normal legit median / mean top-ranked signal: `0.0073 / 0.0093`
+- pro stress-test median / mean top-ranked signal: `0.0073 / 0.0074`
+- suspicious benchmark top-1 / top-3 retrieval: `0.60 / 0.90`
 
 That is the right shape for a behavioral review system. The goal is not to call someone a cheater from one score. The goal is to surface the players who deserve deeper review while minimizing false positives on strong legitimate players.
 
