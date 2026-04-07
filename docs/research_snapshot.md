@@ -1,6 +1,6 @@
 # Research Snapshot
 
-NullCS is a local/demo-first behavioral triage system for Counter-Strike match review. It is designed to help narrow analyst attention inside a single demo, not to act as an enforcement system or one-click verdict engine.
+NullCS is a behavioral analysis system for Counter-Strike match review. It is designed to help narrow analyst attention inside a single demo, not to act as an enforcement system or one-click verdict engine.
 
 ## What Changed Recently
 
@@ -55,11 +55,15 @@ What stays private:
 - internal model files
 - detailed feature manifests and sensitive operational logic
 
-## Summer Launch
+## Public Repo Positioning
 
-The public website is planned to launch this summer as a research preview. The public-facing version will stay aligned with the same core principles used in the repo:
+The public repo stays aligned with the same core principles used throughout the project:
 
 - research-first framing
 - review support, not verdict language
-- public-safe deployment defaults
+- public-safe benchmark summaries
 - conservative handling of sensitive data and implementation details
+
+## Desktop Beta Note
+
+The desktop application is being kept out of the public repo for now, but a desktop beta is planned for this summer. The public GitHub side is meant to show the research stack, benchmark behavior, and public-safe findings behind that product direction.

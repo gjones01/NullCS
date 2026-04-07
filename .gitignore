@@ -84,3 +84,15 @@ main/data/raw_uploads/
 main/ui/web/.env.local
 NOTES_STATUS.md
 REPO_MAP.md
+
+# Public repo exclusions: private docs, desktop app, and generated promo assets
+main/ui/**
+docs/codex_handoff_2026-04-05.md
+docs/desktop_alpha_plan.md
+docs/dev_setup.md
+docs/OWNERSHIP_MAP.md
+docs/personal_pipeline_guide.md
+docs/training_log.md
+docs/assets/linkedin/**
+docs/assets/trailer/**
+docs/assets/trailer_real/**

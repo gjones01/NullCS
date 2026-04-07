@@ -1,52 +1,99 @@
 # NullCS
 
-NullCS is a Counter-Strike demo review pipeline with:
+NullCS is a machine learning research project for behavioral review in Counter-Strike demos.
 
-- local/private inference for full analysis
-- a public-safe web UI path for demo-mode deployments
-- a stacked encounter-model research path that now includes both an MLP baseline and a temporal CNN experiment
+The project studies whether suspicious behavior can be surfaced from tick-level demo data in a way that is measurable, explainable, and conservative around false positives. The system is designed for match-relative triage and analyst review, not automated enforcement or one-click verdicts.
 
-NullCS is a research project focused on single-match behavioral review, not automated enforcement. The public website is planned to launch this summer as a research preview.
+## Start Here
 
-## Current Snapshot
+If you are visiting the repo for the first time, read these in order:
 
-- Legit benchmark slices are currently very quiet in held-out normal and pro stress-test demos.
-- Cheater benchmark slices surface strongly enough to support triage, but the system is still framed as review support rather than a verdict engine.
-- The current strongest direction is the stacked player-level model with hard-negative legit data. The temporal CNN remains valuable R&D infrastructure, but it is not the current champion.
+1. `docs/research_snapshot.md`
+   High-level benchmark story, current findings, and public-safe plots
+2. `docs/model_stack.md`
+   What the modeling pipeline is actually trying to do
+3. `docs/benchmark_methodology.md`
+   How to interpret the benchmark slices and why quiet legit/pro behavior matters
 
-## Research Notes
+The desktop application itself is not part of the public repo, but a desktop beta is planned for this summer.
 
-- Benchmark summary and public-safe plots: `docs/research_snapshot.md`
-- Temporal CNN experiment notes: `docs/cnn_experiments.md`
+## What This Public Repo Covers
 
-## Local Development
+This repo is the public-safe research side of NullCS:
 
-Backend:
+- feature engineering for player-level and encounter-level behavioral signals
+- stacked modeling experiments for match-relative player ranking
+- benchmark methodology and public-safe benchmark summaries
+- selected plots, charts, and written findings
 
-```powershell
-python -m pip install -r main/ui/api/requirements.txt
-python -m uvicorn main.ui.api.main:app --host 127.0.0.1 --port 8000 --reload
-```
+This repo intentionally avoids shipping:
 
-Frontend:
+- raw demos or uploaded match files
+- processed local artifacts and private datasets
+- model binaries and internal evidence exports
+- desktop app packaging and private operational codepaths
 
-```powershell
-cd main/ui/web
-npm install
-npm run dev -- --host 0.0.0.0 --port 5173
-```
+## Current Public-Safe Read
 
-## Key Docs
+The strongest current high-level benchmark story is:
 
-- Security policy: `SECURITY.md`
-- Security controls summary: `docs/security.md`
-- Deployment guide: `docs/deployment.md`
-- UI details: `main/ui/README.md`
-- Research snapshot: `docs/research_snapshot.md`
-- Temporal CNN experiment notes: `docs/cnn_experiments.md`
+- suspicious benchmark cases surface clearly at the top of the lobby
+- held-out normal legit demos stay very quiet
+- pro stress-test demos also stay quiet
+
+That is the right shape for a behavioral review system. The goal is not to call someone a cheater from one score. The goal is to surface the players who deserve deeper review while minimizing false positives on strong legitimate players.
+
+See:
+
+- `docs/research_snapshot.md`
+- `docs/benchmark_methodology.md`
+
+## What To Look At
+
+If you want the shortest useful summary of the project:
+
+- look at the benchmark slice plots in `docs/research_snapshot.md`
+- read the stacked-model overview in `docs/model_stack.md`
+- read `docs/public_repo_scope.md` to understand what is intentionally omitted from the public repo
+
+## Research Direction
+
+NullCS currently centers on a stacked review pipeline:
+
+1. parse tick-level demo data
+2. build encounter-level and player-level behavioral features
+3. score players with a match-relative ranking model
+4. study where suspicious cases separate from held-out legit and pro slices
+
+The project has also explored encounter-level temporal modeling, including a temporal CNN path. That line remains useful research infrastructure, but the main public story is still the benchmark behavior of the broader stacked review system.
+
+See:
+
+- `docs/model_stack.md`
+- `docs/cnn_experiments.md`
+
+## Repo Guide
+
+- `docs/research_snapshot.md`
+  Public-safe benchmark summary and current findings
+
+- `docs/model_stack.md`
+  End-to-end explanation of the modeling approach
+
+- `docs/benchmark_methodology.md`
+  How the benchmark slices and metrics are framed
+
+- `docs/cnn_experiments.md`
+  Encounter-level temporal modeling notes
+
+- `docs/public_repo_scope.md`
+  What is intentionally public here and what is kept private
+
+- `SECURITY.md`
+  Public repo security and deployment boundaries
 
 ## Public Repo Rules
 
-- Do not commit raw demos, datasets, processed outputs, model binaries, reports, logs, or secrets.
-- Public deployments should use demo mode only.
-- Full inference, uploads, and model artifacts should remain local or on a private backend.
+- Do not commit demos, parquet files, reports, model binaries, or local evidence exports.
+- Keep benchmark reporting public-safe and aggregate.
+- Keep the framing research-first: review support, not verdict language.
