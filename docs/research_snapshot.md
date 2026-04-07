@@ -5,7 +5,7 @@ NullCS is a behavioral analysis system for Counter-Strike match review. It is de
 ## What Changed Recently
 
 - tightened training and inference parity around richer tick and input fields
-- softened the interpretation layer so strong legitimate players are less likely to be overstated by the UI
+- softened the interpretation layer so strong legitimate players are less likely to be overstated in public-facing summaries
 - added pro-level hard negatives to improve real-world separation
 - built a stacked encounter-model path for player-level ranking
 - added a benchmark harness to compare held-out legit, pro stress-test, and cheater slices

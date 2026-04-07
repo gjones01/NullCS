@@ -27,44 +27,11 @@ Current structure:
 3. Aggregate encounter scores per player in a single demo
 4. Merge those stacked features into the player-level model flow
 
-## Public-Safe Experiment Plots
+## Public Research Position
 
-These plots are derived summaries only. They do not contain raw demos, filesystem paths, Steam IDs, or private artifacts.
+The main reason this experiment remains worth documenting publicly is not that it became the top-line champion model. It is that it established two useful research conclusions:
 
-### Reaction-Time ECDF
+- encounter-level temporal structure carries real signal
+- stacking encounter summaries back into the final player-level ranker is more promising than relying on broad aggregates alone
 
-![Reaction-time ECDF](assets/plots/P1_reaction_ecdf.png)
-
-### Distance vs Pre-Window Minimum Aim Error
-
-![Distance vs minimum aim error](assets/plots/D_distance_vs_min_aim_error.png)
-
-### Reaction vs Minimum Aim Error
-
-![Reaction vs minimum aim error](assets/plots/P5_reaction_vs_minerr_jitter.png)
-
-### Visibility Before Shot Distribution
-
-![Visibility histogram](assets/plots/V_visible_frac_pre_hist.png)
-
-### Snap P95 Histogram
-
-![Snap P95 histogram](assets/plots/C_snap_p95_hist.png)
-
-## Operational Notes
-
-- Model artifacts remain intentionally ignored and should not be committed.
-- Raw uploaded demos under `main/data/raw_uploads/` remain local-only.
-- Use demo mode for any public frontend deployment.
-
-## Training Entry Point
-
-```powershell
-python main/scripts/train_encounter_nn.py --train-data cs2cd --device cpu
-```
-
-For a quick smoke run:
-
-```powershell
-python main/scripts/train_encounter_nn.py --train-data cs2cd --max-demos 16 --epochs 3 --patience 1 --device cpu
-```
+That makes the temporal CNN path valuable research infrastructure even when the final public benchmark story is still told through the broader stacked system.
