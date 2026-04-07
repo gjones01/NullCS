@@ -95,9 +95,3 @@ See:
 
 - `docs/public_repo_scope.md`
   What is intentionally public here and what is kept private
-
-## Public Repo Rules
-
-- Do not commit demos, parquet files, reports, model binaries, or local evidence exports.
-- Keep benchmark reporting public-safe and aggregate.
-- Keep the framing research-first: review support, not verdict language.
