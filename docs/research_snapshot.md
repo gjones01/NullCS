@@ -68,15 +68,3 @@ What stays private:
 - internal model files
 - detailed feature manifests and sensitive operational logic
 
-## Public Repo Positioning
-
-The public repo stays aligned with the same core principles used throughout the project:
-
-- research-first framing
-- review support, not verdict language
-- public-safe benchmark summaries
-- conservative handling of sensitive data and implementation details
-
-## Public Repo Note
-
-This GitHub repo is meant to present the research stack, benchmark behavior, and public-safe findings only. Product packaging, local workflows, and private operational layers are intentionally kept out of scope here.
