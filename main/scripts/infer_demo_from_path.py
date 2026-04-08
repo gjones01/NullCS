@@ -34,13 +34,7 @@ from src.utils.scoring import (
     top_signal_titles,
 )
 from src.utils.model_registry import resolve_model_artifacts
-
-
-PROCESSED_ROOT = Path(r"C:\NullCS\main\data\processed")
-PARSE_ZIPS_ROOT = PROCESSED_ROOT / "parse_zips"
-DEMOS_ROOT = PROCESSED_ROOT / "demos"
-REPORTS_ROOT = PROCESSED_ROOT / "reports"
-MODELS_ROOT = PROCESSED_ROOT / "models"
+from src.utils.project_paths import DEMOS_ROOT, MODELS_ROOT, PARSE_ZIPS_ROOT, PROCESSED_ROOT, REPORTS_ROOT
 
 
 def _safe_print(text: str) -> None:

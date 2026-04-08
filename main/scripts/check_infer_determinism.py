@@ -9,11 +9,17 @@ from pathlib import Path
 
 import pandas as pd
 
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from src.utils.project_paths import PROCESSED_ROOT
+
 
 def parse_args() -> argparse.Namespace:
     ap = argparse.ArgumentParser(description="Run inference twice on same demo and assert deterministic raw_proba/model.")
     ap.add_argument("--dem_path", required=True, help="Path to a .dem file")
-    ap.add_argument("--out_dir", default=r"C:\NullCS\main\data\processed")
+    ap.add_argument("--out_dir", default=str(PROCESSED_ROOT))
     ap.add_argument("--model-artifact", default=None, help="Optional model artifact filename/path")
     return ap.parse_args()
 

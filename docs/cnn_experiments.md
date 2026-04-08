@@ -4,8 +4,8 @@ This repo now includes an encounter-level temporal CNN baseline that scores figh
 
 ## What Changed
 
-- `main/scripts/train_encounter_nn.py` defaults to `--model-type temporal_cnn`
-- `main/src/models/encounter_nn.py` contains the temporal sequence model, preprocessing, aggregation, and inference scoring helpers
+- the research stack includes an encounter-level temporal CNN baseline
+- the temporal path models short per-encounter sequences before aggregating them back to the player level
 - encounter-level scores can be merged back into player features as stacked features for the final player-level model
 
 ## Current Status

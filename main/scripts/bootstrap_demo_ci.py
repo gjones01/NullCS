@@ -12,11 +12,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.utils.bootstrap_demo_ci import bootstrap_player_demo_ci
-
-
-PROCESSED_ROOT = Path(r"C:\NullCS\main\data\processed")
-REPORTS_ROOT = PROCESSED_ROOT / "reports"
-DEMOS_ROOT = PROCESSED_ROOT / "demos"
+from src.utils.project_paths import DEMOS_ROOT, PROCESSED_ROOT, REPORTS_ROOT
 
 
 def parse_args() -> argparse.Namespace:

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import hashlib
 import json
 import shutil
@@ -14,12 +15,24 @@ from xgboost import XGBClassifier
 
 # Ensure "main/" is importable.
 MAIN_ROOT = Path(__file__).resolve().parents[1]
-if str(MAIN_ROOT) not in sys.path:
-    sys.path.insert(0, str(MAIN_ROOT))
+sys.path = [p for p in sys.path if "ClarityCS\\main" not in str(p)]
+if str(MAIN_ROOT) in sys.path:
+    sys.path.remove(str(MAIN_ROOT))
+sys.path.insert(0, str(MAIN_ROOT))
+for mod_name in list(sys.modules):
+    if mod_name == "src" or mod_name.startswith("src."):
+        sys.modules.pop(mod_name, None)
+src_init = MAIN_ROOT / "src" / "__init__.py"
+src_spec = importlib.util.spec_from_file_location("src", src_init, submodule_search_locations=[str(MAIN_ROOT / "src")])
+if src_spec is None or src_spec.loader is None:
+    raise RuntimeError(f"Could not bootstrap local src package from {src_init}")
+src_module = importlib.util.module_from_spec(src_spec)
+sys.modules["src"] = src_module
+src_spec.loader.exec_module(src_module)
 
-from src.parse import parse_demos_awpy_api as parse_mod
-from src.features import build_engagement_features as build_mod
+from src.features import build_cs2cd_engagement_features as cs2cd_build_mod
 from src.features import aggregate_player_features as agg_mod
+from src.adapters.demoparser2_local import load_demo as load_demoparser2_demo
 from src.utils.scoring import (
     ensure_no_forbidden_features,
     compute_confidence_series,
@@ -30,6 +43,14 @@ from src.utils.scoring import (
     top_signal_titles,
 )
 from src.utils.model_registry import resolve_model_artifacts
+from src.utils.project_paths import RAW_UPLOADS_ROOT
+from src.models.encounter_nn import (
+    encounter_infer_player_feature_path,
+    encounter_model_artifacts,
+    load_trained_encounter_model,
+    score_encounter_frame,
+    aggregate_encounter_scores,
+)
 
 
 def parse_args() -> argparse.Namespace:
@@ -69,6 +90,16 @@ def _feature_vector_hash(row: pd.Series, feature_cols: list[str]) -> str:
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
+def _write_table(df, path: Path) -> None:
+    if hasattr(df, "write_parquet"):
+        df.write_parquet(path)
+        return
+    if hasattr(df, "to_parquet"):
+        df.to_parquet(path, index=False)
+        return
+    raise TypeError(f"Unsupported table type for parquet write: {type(df).__name__}")
+
+
 def _high_tag_flags(row: pd.Series) -> dict[str, bool]:
     out = {}
     for c in ["prefire_pct", "thrusmoke_pct", "hs_pct", "long_fast_rt_pct"]:
@@ -91,7 +122,7 @@ def _ensure_demo_copy(src_dem: Path, demo_id: str, raw_uploads_root: Path) -> Pa
     return dst_dem
 
 
-def _build_player_features_for_demo(engagement_path: Path, demo_id: str) -> pd.DataFrame:
+def _build_player_features_for_demo(engagement_path: Path, demo_id: str, encounter_path: Path | None = None) -> pd.DataFrame:
     df = pd.read_parquet(engagement_path)
     if df.empty:
         raise RuntimeError(f"Engagement features are empty for demo: {demo_id}")
@@ -106,141 +137,133 @@ def _build_player_features_for_demo(engagement_path: Path, demo_id: str) -> pd.D
     if "attacker_name" not in df.columns:
         df["attacker_name"] = ""
 
-    for col, default in [
-        ("rt_ticks", np.nan),
-        ("distance", np.nan),
-        ("headshot", False),
-        ("is_thrusmoke", False),
-        ("round_num", np.nan),
-        ("kill_tick", np.nan),
-        ("victim_steamid", ""),
-    ]:
-        if col not in df.columns:
-            df[col] = default
+    encounter_df = pd.DataFrame()
+    if encounter_path is not None and encounter_path.exists():
+        encounter_df = pd.read_parquet(encounter_path)
+        if not encounter_df.empty:
+            encounter_df = encounter_df.copy()
+            encounter_df["demo_id"] = demo_id
+            encounter_df["label"] = -1
+            encounter_df["attacker_steamid"] = encounter_df["attacker_steamid"].astype(str).str.strip()
+            if "attacker_name" not in encounter_df.columns:
+                encounter_df["attacker_name"] = ""
 
-    key_cols = ["demo_id", "map_name", "attacker_steamid", "attacker_name", "label"]
-    rows = [agg_mod.build_row(g) for _, g in df.groupby(key_cols, sort=False)]
-    agg = pd.DataFrame(rows)
-    agg = agg[agg["n_kills_with_rt"] >= agg_mod.MIN_KILLS].copy()
+    agg = agg_mod.aggregate_kill_and_encounter_frames(df, encounter_df)
     if agg.empty:
         raise RuntimeError(f"No eligible players (MIN_KILLS filter) for demo: {demo_id}")
-
-    n_players = df.groupby("demo_id")["attacker_steamid"].nunique().rename("n_players")
-    agg = agg.merge(n_players, on="demo_id", how="left")
-    agg["kills_per_player"] = agg["n_kills"] / agg["n_players"].replace(0, np.nan)
-
-    agg["fast_rt_rate"] = [agg_mod.laplace(s, n) for s, n in zip(agg["fast_rt_count"], agg["rt_n"])]
-    agg["headshot_rate"] = [agg_mod.laplace(s, n) for s, n in zip(agg["headshot_count"], agg["hs_n"])]
-    agg["rt_le_2_rate"] = [agg_mod.laplace(s, n) for s, n in zip(agg["rt_le_2_count"], agg["rt_n"])]
-    agg["rt_le_4_rate"] = [agg_mod.laplace(s, n) for s, n in zip(agg["rt_le_4_count"], agg["rt_n"])]
-    agg["prefire_rate"] = [agg_mod.laplace(s, n) for s, n in zip(agg["prefire_count"], agg["n_kills"])]
-    agg["prefire_long_range_rate"] = [agg_mod.laplace(s, n) for s, n in zip(agg["prefire_long_range_count"], agg["n_kills"])]
-    agg["prefire_repeat_victims"] = [agg_mod.laplace(s, n) for s, n in zip(agg["prefire_victim_n"], agg["n_victims"])]
-    agg["thrusmoke_kill_rate"] = [agg_mod.laplace(s, n) for s, n in zip(agg["thrusmoke_kills"], agg["n_kills"])]
-    agg["thrusmoke_round_rate"] = [agg_mod.laplace(s, n) for s, n in zip(agg["thrusmoke_rounds"], agg["rounds_played"])]
-    agg["long_range_fast_rt_rate"] = [agg_mod.laplace(s, n) for s, n in zip(agg["long_range_fast_rt_count"], agg["long_range_kills_with_rt"])]
-    agg["long_range_fast_rt_rate_4"] = [agg_mod.laplace(s, n) for s, n in zip(agg["long_range_fast_rt_4_count"], agg["long_range_kills_with_rt"])]
-
-    agg["rifle_kill_share"] = [agg_mod.laplace(s, n) for s, n in zip(agg["rifle_kills"], agg["n_kills"])]
-    agg["pistol_kill_share"] = [agg_mod.laplace(s, n) for s, n in zip(agg["pistol_kills"], agg["n_kills"])]
-    agg["awp_smg_kill_share"] = [agg_mod.laplace(s, n) for s, n in zip(agg["awp_smg_kills"], agg["n_kills"])]
-
-    agg["rifle_fast_rt_rate"] = [agg_mod.laplace(s, n) for s, n in zip(agg["rifle_fast_rt_count"], agg["rifle_kills"])]
-    agg["pistol_fast_rt_rate"] = [agg_mod.laplace(s, n) for s, n in zip(agg["pistol_fast_rt_count"], agg["pistol_kills"])]
-    agg["awp_smg_fast_rt_rate"] = [agg_mod.laplace(s, n) for s, n in zip(agg["awp_smg_fast_rt_count"], agg["awp_smg_kills"])]
-
-    agg["prefire_rate_rifle"] = [agg_mod.laplace(s, n) for s, n in zip(agg["rifle_prefire_count"], agg["rifle_kills"])]
-    agg["prefire_rate_pistol"] = [agg_mod.laplace(s, n) for s, n in zip(agg["pistol_prefire_count"], agg["pistol_kills"])]
-    agg["prefire_rate_awp_smg"] = [agg_mod.laplace(s, n) for s, n in zip(agg["awp_smg_prefire_count"], agg["awp_smg_kills"])]
-
-    agg["thrusmoke_rate_rifle"] = [agg_mod.laplace(s, n) for s, n in zip(agg["rifle_thrusmoke_count"], agg["rifle_kills"])]
-    agg["thrusmoke_rate_pistol"] = [agg_mod.laplace(s, n) for s, n in zip(agg["pistol_thrusmoke_count"], agg["pistol_kills"])]
-    agg["thrusmoke_rate_awp_smg"] = [agg_mod.laplace(s, n) for s, n in zip(agg["awp_smg_thrusmoke_count"], agg["awp_smg_kills"])]
-
-    agg["prefire_rate_w"] = agg["prefire_rate"] * np.log1p(agg["rt_n"])
-    agg["thrusmoke_rate_w"] = agg["thrusmoke_kill_rate"] * np.log1p(agg["n_kills"])
-    agg["fast_rt_rate_w"] = agg["fast_rt_rate"] * np.log1p(agg["rt_n"])
-
-    agg["rt_iqr_80"] = agg["rt_p90"] - agg["rt_p10"]
-    agg["dist_tail"] = agg["dist_p90"] - agg["dist_median"]
-
-    global_rt_median = float(agg["rt_median"].median(skipna=True))
-    global_rt_p10 = float(agg["rt_p10"].median(skipna=True))
-    global_rt_p90 = float(agg["rt_p90"].median(skipna=True))
-    global_dist_median = float(agg["dist_median"].median(skipna=True))
-
-    agg["rt_median_shrunk"] = (agg["rt_median"] * agg["rt_n"] + global_rt_median * agg_mod.SHRINK_K) / (agg["rt_n"] + agg_mod.SHRINK_K)
-    agg["rt_p10_shrunk"] = (agg["rt_p10"] * agg["rt_n"] + global_rt_p10 * agg_mod.SHRINK_K) / (agg["rt_n"] + agg_mod.SHRINK_K)
-    agg["rt_p90_shrunk"] = (agg["rt_p90"] * agg["rt_n"] + global_rt_p90 * agg_mod.SHRINK_K) / (agg["rt_n"] + agg_mod.SHRINK_K)
-    agg["dist_median_shrunk"] = (agg["dist_median"] * agg["n_kills"] + global_dist_median * agg_mod.SHRINK_K) / (agg["n_kills"] + agg_mod.SHRINK_K)
-
-    rt_derived = [
-        "rt_mean",
-        "rt_median",
-        "rt_p10",
-        "rt_p90",
-        "rt_std",
-        "rt_median_shrunk",
-        "rt_p10_shrunk",
-        "rt_p90_shrunk",
-        "fast_rt_rate",
-        "fast_rt_rate_w",
-        "rt_le_2_rate",
-        "rt_le_4_rate",
-        "prefire_rate",
-        "prefire_rate_w",
-        "prefire_long_range_rate",
-        "prefire_repeat_victims",
-        "long_range_fast_rt_rate",
-        "long_range_fast_rt_rate_4",
-        "max_fast_rt_streak",
-        "max_prefire_streak",
-        "rifle_fast_rt_rate",
-        "pistol_fast_rt_rate",
-        "awp_smg_fast_rt_rate",
-        "prefire_rate_rifle",
-        "prefire_rate_pistol",
-        "prefire_rate_awp_smg",
-    ]
-    low_evidence = agg["rt_n"] < agg_mod.MIN_RT_EVIDENCE
-    for c in rt_derived:
-        if c in agg.columns:
-            agg.loc[low_evidence, c] = np.nan
-
-    norm_map = {
-        "rt_median": ("rt_median_pct", "rt_median_z"),
-        "prefire_rate": ("prefire_pct", "prefire_z"),
-        "thrusmoke_kill_rate": ("thrusmoke_pct", "thrusmoke_z"),
-        "headshot_rate": ("hs_pct", "hs_z"),
-        "long_range_fast_rt_rate_4": ("long_fast_rt_pct", "long_fast_rt_z"),
-        "max_thrusmoke_round_streak": ("max_thr_round_streak_pct", "max_thr_round_streak_z"),
-        "dist_tail": ("dist_tail_pct", "dist_tail_z"),
-    }
-    for base_col, (pct_col, z_col) in norm_map.items():
-        if base_col in agg.columns:
-            agg = agg_mod.add_demo_norms(agg, base_col, pct_col, z_col)
-
-    helper_cols = [
-        "headshot_count",
-        "fast_rt_count",
-        "rt_le_2_count",
-        "rt_le_4_count",
-        "prefire_long_range_count",
-        "prefire_victim_n",
-        "long_range_fast_rt_count",
-        "long_range_fast_rt_4_count",
-        "rifle_fast_rt_count",
-        "pistol_fast_rt_count",
-        "awp_smg_fast_rt_count",
-        "rifle_prefire_count",
-        "pistol_prefire_count",
-        "awp_smg_prefire_count",
-        "rifle_thrusmoke_count",
-        "pistol_thrusmoke_count",
-        "awp_smg_thrusmoke_count",
-    ]
-    agg = agg.drop(columns=[c for c in helper_cols if c in agg.columns])
     return agg
+
+
+def _merge_encounter_features_for_demo(player_df: pd.DataFrame, encounter_path: Path) -> pd.DataFrame:
+    if not encounter_path.exists():
+        return player_df
+
+    encounters = pd.read_parquet(encounter_path)
+    if encounters.empty:
+        return player_df
+
+    encounters = encounters.copy()
+    for col, default in [
+        ("demo_id", player_df["demo_id"].iloc[0] if not player_df.empty else ""),
+        ("map_name", ""),
+        ("attacker_steamid", ""),
+        ("attacker_name", ""),
+        ("label", -1),
+        ("start_tick", np.nan),
+        ("exposure_duration", np.nan),
+        ("visible_ratio", np.nan),
+        ("time_to_first_shot", np.nan),
+        ("time_to_first_damage", np.nan),
+        ("aim_error_at_first_visible", np.nan),
+        ("aim_error_min", np.nan),
+        ("aim_acquire_time", np.nan),
+        ("aim_dwell_ticks", np.nan),
+        ("shot_before_aim_acquire", False),
+        ("shot_count", np.nan),
+        ("shot_rate_per_128", np.nan),
+        ("mean_shot_gap", np.nan),
+        ("damage_count", np.nan),
+        ("damage_total", np.nan),
+        ("ended_in_damage", False),
+        ("angular_velocity_mean", np.nan),
+        ("angular_jerk_mean", np.nan),
+        ("los_angular_velocity_mean", np.nan),
+        ("los_angular_jerk_mean", np.nan),
+        ("distance_mean", np.nan),
+        ("closing_speed_mean", np.nan),
+        ("attacker_speed_mean", np.nan),
+        ("victim_speed_mean", np.nan),
+        ("relative_speed_mean", np.nan),
+        ("ended_in_kill_within_y", False),
+    ]:
+        if col not in encounters.columns:
+            encounters[col] = default
+    encounters["label"] = -1
+
+    encounters["attacker_steamid"] = encounters["attacker_steamid"].astype(str).str.strip()
+    # Do not key on attacker_name for inference merges. Name encoding / normalization can differ
+    # between kill and encounter paths even when the SteamID is the same.
+    key_cols = ["demo_id", "map_name", "attacker_steamid", "label"]
+    enc_rows = [agg_mod.build_encounter_row(g) for _, g in encounters.groupby(key_cols, sort=False)]
+    enc_agg = pd.DataFrame(enc_rows)
+    if enc_agg.empty:
+        return player_df
+    if "attacker_name" in enc_agg.columns:
+        enc_agg = enc_agg.drop(columns=["attacker_name"])
+    return player_df.merge(enc_agg, on=key_cols, how="left")
+
+
+def _merge_encounter_nn_features_for_demo(
+    player_df: pd.DataFrame,
+    encounter_df: pd.DataFrame,
+    processed_root: Path,
+    train_mode: str,
+) -> pd.DataFrame:
+    artifacts = encounter_model_artifacts(processed_root / "models", train_mode)
+    if not artifacts["model"].exists() or not artifacts["manifest"].exists():
+        return player_df
+    if encounter_df.empty:
+        return player_df
+    try:
+        manifest = json.loads(artifacts["manifest"].read_text(encoding="utf-8"))
+        if manifest.get("max_demos") not in (None, ""):
+            print("[WARN] encounter NN artifact came from a capped smoke run; skipping stack features in inference")
+            return player_df
+        model, preproc, feature_cols, device_name = load_trained_encounter_model(
+            artifacts["model"], artifacts["preproc"], artifacts["features"]
+        )
+        scored = score_encounter_frame(encounter_df, model, preproc, feature_cols, device=device_name)
+        player_scores = aggregate_encounter_scores(scored)
+        if player_scores.empty:
+            return player_df
+        out_path = encounter_infer_player_feature_path(processed_root, str(player_df["demo_id"].iloc[0]))
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        player_scores.to_parquet(out_path, index=False)
+        merged = player_df.merge(player_scores, on=["demo_id", "attacker_steamid"], how="left")
+        print(f"[OK] wrote {out_path}")
+        return merged
+    except Exception as exc:
+        print(f"[WARN] encounter NN scoring skipped: {exc}")
+        return player_df
+
+
+def _selected_train_mode(models_dir: Path, model_artifact: str | None) -> tuple[Path, Path, str]:
+    model_path, feats_path = resolve_model_artifacts(models_dir, model_artifact)
+    manifest_path = model_path.with_name(f"{model_path.stem}_training_manifest.json")
+    train_mode = "merged"
+    if manifest_path.exists():
+        try:
+            payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+            train_mode = str(payload.get("train_data_mode", train_mode)).strip().lower() or train_mode
+        except Exception:
+            pass
+    return model_path, feats_path, train_mode
+
+
+def _build_demo_feature_frames_demoparser2(demo_file: Path, demo_id: str) -> tuple[pd.DataFrame, pd.DataFrame]:
+    match = load_demoparser2_demo(demo_file, demo_id=demo_id)
+    kill_df, encounter_df = cs2cd_build_mod.build_match_outputs(match)
+    return kill_df, encounter_df
 
 
 def _infer_scores(
@@ -252,7 +275,7 @@ def _infer_scores(
     reports_dir = processed_root / "reports"
     reports_dir.mkdir(parents=True, exist_ok=True)
 
-    requested_model = model_artifact or os.environ.get("CLARITY_MODEL_ARTIFACT")
+    requested_model = model_artifact or os.environ.get("NULLCS_MODEL_ARTIFACT") or os.environ.get("CLARITY_MODEL_ARTIFACT")
     model_path, feats_path = resolve_model_artifacts(models_dir, requested_model)
     model_hash = _sha256_file(model_path)
     feats_hash = _sha256_file(feats_path)
@@ -276,7 +299,7 @@ def _infer_scores(
     out["feature_list_version"] = feats_hash[:12]
     out["proba_cheater_infer"] = scores
     out["confidence"] = compute_confidence_series(out)
-    calibrator = load_calibrator()
+    calibrator = load_calibrator(model_path=model_path)
     out["proba_calibrated"] = np.nan
     if calibrator is not None:
         out["proba_calibrated"] = maybe_calibrate(out["proba_cheater_infer"], calibrator)
@@ -284,7 +307,7 @@ def _infer_scores(
     miss = risk_base.isna()
     risk_base.loc[miss] = out.loc[miss, "proba_cheater_infer"].astype(float)
     out["risk"] = apply_rt_low_evidence_downweight(risk_base, out.get("rt_n", pd.Series([0] * len(out))))
-    out["risk_band"] = risk_band_series(out["risk"])
+    out["risk_band"] = risk_band_series(out["risk"], out.get("rt_n"), out.get("n_kills_with_rt"), out.get("confidence"))
     out["rt_reason_confidence"] = np.where(out.get("rt_n", pd.Series([0] * len(out))).fillna(0).astype(float) < 8, "low", "normal")
     out["ci_low"] = np.nan
     out["ci_high"] = np.nan
@@ -411,33 +434,36 @@ def main() -> int:
     if not demo_id:
         raise ValueError("demo_id cannot be empty")
 
-    project_root = MAIN_ROOT.parent  # C:\NullCS
-    raw_uploads_root = project_root / "main" / "data" / "raw_uploads"
-    parsed_zips_root = project_root / "parsed_zips"
+    raw_uploads_root = RAW_UPLOADS_ROOT
     demos_root = processed_root / "demos"
     reports_root = processed_root / "reports"
+    models_dir = processed_root / "models"
 
     demo_file = _ensure_demo_copy(dem_path, demo_id, raw_uploads_root)
     print(f"[INFO] demo file: {demo_file}")
+    model_path, _feats_path, train_mode = _selected_train_mode(models_dir, args.model_artifact)
+    print(f"[INFO] selected model: {model_path.name} train_mode={train_mode}")
 
-    parse_mod.OUT_ROOT = parsed_zips_root
-    ok = parse_mod.parse_one(demo_file)
-    if not ok:
-        raise RuntimeError(f"Parse failed for demo: {demo_file}")
+    parse_warning = None
+    encounter_warning = None
+    parser_mode = "demoparser2_local"
+    if train_mode != "cs2cd":
+        print(f"[WARN] model train_mode={train_mode}; demo will still be parsed with demoparser2-local for schema parity")
 
-    zip_path = parsed_zips_root / f"{demo_id}.zip"
-    if not zip_path.exists():
-        raise FileNotFoundError(f"Parsed zip not found: {zip_path}")
-    print(f"[INFO] parsed zip: {zip_path}")
+    kill_df, encounter_df = _build_demo_feature_frames_demoparser2(demo_file, demo_id=demo_id)
+    print("[INFO] parsed demo with demoparser2-local")
 
-    eng_df = build_mod.build_for_zip(zip_path)
     demo_dir = demos_root / demo_id
     demo_dir.mkdir(parents=True, exist_ok=True)
     eng_path = demo_dir / "engagement_features.parquet"
-    eng_df.write_parquet(eng_path)
+    encounter_path = demo_dir / "encounters.parquet"
+    _write_table(kill_df, eng_path)
+    _write_table(encounter_df, encounter_path)
     print(f"[OK] wrote {eng_path}")
+    print(f"[OK] wrote {encounter_path}")
 
-    player_df = _build_player_features_for_demo(eng_path, demo_id=demo_id)
+    player_df = _build_player_features_for_demo(eng_path, demo_id=demo_id, encounter_path=encounter_path)
+    player_df = _merge_encounter_nn_features_for_demo(player_df, encounter_df, processed_root, train_mode)
     per_demo_player_path = demo_dir / "player_features_infer.parquet"
     player_df.to_parquet(per_demo_player_path, index=False)
     print(f"[OK] wrote {per_demo_player_path}")
@@ -455,8 +481,12 @@ def main() -> int:
     manifest = {
         "demo_id": demo_id,
         "demo_file": str(demo_file),
-        "zip_path": str(zip_path),
+        "zip_path": "",
+        "parser_mode": parser_mode,
+        "parse_warning": parse_warning,
         "engagement_features": str(eng_path),
+        "encounters": str(encounter_path),
+        "encounter_build_warning": encounter_warning,
         "player_features_infer": str(per_demo_player_path),
         "ranked_players_infer": str(per_demo_csv),
         "debug_score_trace": str(debug_trace_path),
