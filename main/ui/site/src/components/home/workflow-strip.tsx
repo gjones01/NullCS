@@ -8,8 +8,8 @@ export function WorkflowStrip() {
     <SectionShell
       id="workflow"
       eyebrow="How It Works"
-      title="A high-level pipeline that stays readable."
-      description="The page introduces the workflow without drowning the visitor in implementation detail. This is the right level for a public-facing project site."
+      title="Parse, score, explain."
+      description="Raw demos are turned into structured events, behavior signals, and ranked review output."
     >
       <div className="grid gap-4 lg:grid-cols-3">
         {workflowSteps.map((item, index) => (

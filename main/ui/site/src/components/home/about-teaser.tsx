@@ -8,8 +8,8 @@ export function AboutTeaser() {
   return (
     <SectionShell
       eyebrow="Project Background"
-      title="The site can introduce the project without flattening the technical story."
-      description="The dedicated About page carries more context around why behavioral review matters, how the research is framed, and where the product direction is headed."
+      title="The About page carries the project background without turning it into filler."
+      description="It explains the founder background, the current benchmark posture, and why NullCS stays cautious about what it claims."
     >
       <div className="grid gap-5 lg:grid-cols-[0.95fr_1.05fr]">
         <div className="overflow-hidden rounded-[2rem] border border-white/10 bg-[#090b12]">
@@ -20,10 +20,10 @@ export function AboutTeaser() {
         </div>
         <div className="rounded-[2rem] border border-white/10 bg-white/[0.03] p-8">
           <p className="text-lg leading-8 text-zinc-300">
-            NullCS is framed around a simple question: can suspicious behavior in a demo be surfaced in a way that stays measurable, conservative, and understandable? That question shapes both the modeling work and the way the project is presented.
+            NullCS is built around a simple question: can suspicious behavior in a demo be surfaced in a way that stays measurable, conservative, and useful for real review?
           </p>
           <p className="mt-5 text-sm leading-7 text-zinc-400">
-            The About page expands on structured demo analysis, explainability, and why the project avoids acting like a one-click verdict engine.
+            The About page expands on the benchmark numbers, Gerry Jones, Jr.'s background, and why the hardest review cases are the ones that matter most.
           </p>
           <div className="mt-8">
             <Link href="/about">

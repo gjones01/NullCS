@@ -26,8 +26,8 @@ export const navItems = [
 
 export const heroMetrics = [
   { label: "Engineered Features", value: "449 player-level signals in the current CS2 stack" },
-  { label: "Benchmark Shape", value: "Quiet on legit and pro slices, louder on suspicious demos" },
-  { label: "Review Output", value: "Explainable, match-relative triage instead of verdict language" },
+  { label: "Benchmark Shape", value: "Suspicious slices rise while legit and pro stress-test slices stay quiet" },
+  { label: "Review Output", value: "Ranked players, evidence, and reasons for review instead of verdict language" },
 ] as const;
 
 export const benchmarkStats = [
@@ -39,41 +39,41 @@ export const benchmarkStats = [
 
 export const featureCards = [
   {
-    title: "Structured demo analysis",
-    body: "NullCS works from parsed Counter-Strike 2 demo structure instead of surface-level highlight stats or clip-driven heuristics.",
+    title: "Demo input",
+    body: "Counter-Strike 2 demos are parsed into event, engagement, and encounter structure instead of being judged from clip-level moments or surface stats.",
     icon: Binary,
   },
   {
-    title: "Subtle behavior review",
-    body: "The hard problem is not catching obvious spinbot footage. The harder problem is separating strong legitimate play from lower-visibility assist behavior and info abuse.",
+    title: "Behavior signals",
+    body: "The current stack builds hundreds of player-level signals plus deeper encounter timing channels to study how suspicious behavior unfolds inside real rounds.",
     icon: Radar,
   },
   {
-    title: "Explainable outputs",
-    body: "Signals are paired with reasons, supporting slices, and evidence views designed for analyst review rather than one-click certainty.",
+    title: "Match-relative ranking",
+    body: "Models rank players inside a demo so standouts can be surfaced in context instead of pretending one metric can settle the case alone.",
     icon: ShieldCheck,
   },
   {
-    title: "False-positive pressure matters",
-    body: "One of the central goals is staying restrained on high-ELO and pro-level legitimate play, because an overconfident model is not useful review software.",
+    title: "Evidence output",
+    body: "Scores are paired with reasons and benchmark context so the output can support review, especially when strong legitimate play and subtle cheats start to overlap.",
     icon: ChartColumnBig,
   },
 ] as const;
 
 export const capabilityBands = [
   {
-    title: "Encounter timing review",
-    body: "Tracks visibility-to-shot windows, pressure moments, and response patterns across kill events.",
+    title: "Structured inputs",
+    body: "Demos are normalized into comparable event and encounter data before any ranking is produced.",
     icon: Crosshair,
   },
   {
-    title: "Match-relative scoring",
-    body: "Ranks players within a demo so suspicious standouts can be surfaced for deeper review.",
+    title: "Behavior-first scoring",
+    body: "The stack studies timing, aim process, visibility pressure, and context instead of leaning on one loud metric.",
     icon: Activity,
   },
   {
-    title: "Evidence-oriented reporting",
-    body: "Designed to support judgment, not replace it, with explainability kept central to the workflow.",
+    title: "Analyst-readable output",
+    body: "The goal is a useful review surface: ranked players, evidence, and context that stays interpretable under scrutiny.",
     icon: BookOpenText,
   },
 ] as const;
@@ -82,27 +82,27 @@ export const workflowSteps = [
   {
     step: "01",
     title: "Parse and structure",
-    body: "Raw demos are transformed into event, engagement, and encounter data that can be analyzed consistently across players and rounds.",
+    body: "Raw demos are turned into event, engagement, and encounter data that can be compared consistently across players and rounds.",
     icon: GitBranch,
   },
   {
     step: "02",
     title: "Build hundreds of behavior signals",
-    body: "The current public stack uses 449 player-level engineered features, with encounter-level timing and process channels feeding deeper model paths.",
+    body: "The current stack uses 449 player-level engineered features, plus encounter timing and control-path channels feeding deeper model paths.",
     icon: Bot,
   },
   {
     step: "03",
     title: "Score and explain",
-    body: "Models rank standouts inside a match and export evidence meant to support careful review, not universal cheat claims.",
+    body: "Models rank standouts inside a match and export evidence meant to support careful review, especially when the case is not obvious.",
     icon: ArrowUpRight,
   },
 ] as const;
 
 export const credibilityNotes = [
-  "Current public-safe benchmark shape: suspicious demos rise clearly while held-out legit and pro slices stay compressed near zero",
-  "The project is strongest when it reduces false positives on strong legitimate play instead of simply getting louder everywhere",
-  "NullCS does not claim to detect every cheat type or replace human judgment",
+  "Some demo metrics can scream that something is wrong, but that does not automatically settle the case on its own.",
+  "The real pressure test is whether suspicious slices rise without inflating strong legitimate and pro-level play at the same time.",
+  "Research is still ongoing. The current result is serious progress, not a claim that the problem is solved.",
 ] as const;
 
 export const aboutPrinciples = [
@@ -152,25 +152,25 @@ export const proofCards = [
   {
     eyebrow: "Benchmark slices",
     title: "Top-ranked demo signal separates suspicious slices from legit and pro holdouts",
-    body: "Each box summarizes the distribution of the highest-ranked player signal per demo within a benchmark slice. The important result is not just that suspicious demos shift upward, but that the legit and pro stress-test slices remain compressed near zero instead of inflating under skill. For a review model, that is the core credibility condition: separation without broad false-positive drift.",
+    body: "The strongest player signal in suspicious demos shifts upward, while held-out legit and pro slices stay compressed near zero. That is the core credibility test: separation without broad false-positive drift.",
     image: "/assets/proof-pack/benchmark_top1_distribution.png",
   },
   {
     eyebrow: "Per-demo surface",
     title: "Top-1 and top-3 demo aggregates separate suspicious lobbies from quiet baselines",
-    body: "The x-axis is the strongest player score in a demo and the y-axis is the mean of the top three player scores. Suspicious demos move up and to the right, while normal legit and pro demos remain clustered near the origin. That matters because it shows the signal is not carried only by a single outlier row; the upper part of the lobby is coherently louder in suspicious matches.",
+    body: "Suspicious demos move up and to the right, while legit and pro demos stay near the origin. That matters because the signal is not just one loud outlier; the top of the lobby is coherently louder.",
     image: "/assets/proof-pack/benchmark_top1_vs_top3_scatter.png",
   },
   {
     eyebrow: "Behavior space",
     title: "OOF behavior-space separation is meaningful without pretending the classes are trivially separable",
-    body: "This out-of-fold scatter combines two behavior channels: encounter-model score on the x-axis and process abnormality on the y-axis. Most of the class separation is being carried by the x-axis, while the y-axis adds secondary structure rather than a perfectly clean split. For experienced ML readers, that is a healthier sign than a suspiciously perfect 2D separation: the model is finding signal, but the problem still looks like a hard behavioral classification problem.",
+    body: "The encounter-model channel carries most of the separation while the second axis adds supporting structure. That is a healthier picture than a fake-clean split: there is real signal, but the problem still behaves like a hard classification problem.",
     image: "/assets/proof-pack/oof_behavior_scatter.png",
   },
   {
     eyebrow: "Threshold policy",
     title: "Threshold choice trades false-positive restraint against suspicious-case coverage",
-    body: "This plot shows the expected precision-recall tradeoff as the decision threshold becomes stricter. Raising the threshold improves precision, which is important when strong legit or pro players must stay unflagged, but it reduces recall and therefore lowers coverage of suspicious cases. The significance is operational: NullCS is better thought of as a tunable review-prioritization system than a fixed binary detector.",
+    body: "A stricter threshold improves precision but reduces coverage. Operationally, this means NullCS behaves more like a tunable review-prioritization system than a fixed binary detector.",
     image: "/assets/proof-pack/threshold_tradeoff.png",
   },
 ] as const;

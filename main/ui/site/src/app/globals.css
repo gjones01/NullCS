@@ -82,3 +82,16 @@ a {
     text-wrap: balance;
   }
 }
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+@media (max-width: 640px) {
+  body::before {
+    background-size: 56px 56px;
+    opacity: 0.14;
+  }
+}

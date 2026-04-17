@@ -1,10 +1,10 @@
 "use client";
 
-import { motion, useScroll, useTransform } from "framer-motion";
+import { motion, useReducedMotion, useScroll, useTransform } from "framer-motion";
 
 const clusters = [
   {
-    className: "left-[6%] top-[12%] w-[34rem]",
+    className: "left-[6%] top-[12%] hidden w-[34rem] lg:block",
     nodes: [
       { x: 10, y: 18, label: "57" },
       { x: 22, y: 34, label: "40" },
@@ -22,7 +22,23 @@ const clusters = [
     ],
   },
   {
-    className: "right-[-3%] top-[36%] w-[28rem]",
+    className: "left-[8%] top-[30%] w-[14rem] md:w-[18rem] lg:hidden",
+    nodes: [
+      { x: 10, y: 18, label: "57" },
+      { x: 22, y: 34, label: "40" },
+      { x: 40, y: 48, label: "48" },
+      { x: 58, y: 66, label: "20" },
+      { x: 70, y: 82, label: "44" },
+    ],
+    lines: [
+      [0, 1],
+      [1, 2],
+      [1, 3],
+      [3, 4],
+    ],
+  },
+  {
+    className: "right-[-3%] top-[36%] hidden w-[28rem] lg:block",
     nodes: [
       { x: 18, y: 20, label: "31" },
       { x: 34, y: 36, label: "18" },
@@ -42,24 +58,28 @@ const clusters = [
 ] as const;
 
 export function SignalConstellation() {
+  const prefersReducedMotion = useReducedMotion();
   const { scrollYProgress } = useScroll();
-  const slowY = useTransform(scrollYProgress, [0, 1], ["0%", "-10%"]);
-  const fastY = useTransform(scrollYProgress, [0, 1], ["0%", "-16%"]);
+  const slowY = useTransform(scrollYProgress, [0, 1], prefersReducedMotion ? ["0%", "0%"] : ["0%", "-6%"]);
+  const fastY = useTransform(scrollYProgress, [0, 1], prefersReducedMotion ? ["0%", "0%"] : ["0%", "-10%"]);
 
   return (
     <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
-      <motion.div className="absolute inset-0 opacity-[0.16]" style={{ y: slowY }}>
+      <motion.div className="absolute inset-0 opacity-[0.12] md:opacity-[0.16]" style={{ y: slowY }}>
         {clusters.map((cluster, idx) => (
           <motion.div
             key={idx}
             className={`absolute aspect-square ${cluster.className}`}
-            animate={{ rotate: idx === 0 ? 360 : -360 }}
-            transition={{ duration: idx === 0 ? 90 : 110, repeat: Infinity, ease: "linear" }}
+            animate={prefersReducedMotion ? undefined : { rotate: idx % 2 === 0 ? 360 : -360 }}
+            transition={prefersReducedMotion ? undefined : { duration: idx % 2 === 0 ? 90 : 110, repeat: Infinity, ease: "linear" }}
           >
             <svg viewBox="0 0 100 100" className="h-full w-full overflow-visible">
               {cluster.lines.map(([a, b], lineIdx) => {
                 const start = cluster.nodes[a];
                 const end = cluster.nodes[b];
+                if (!start || !end) {
+                  return null;
+                }
                 return (
                   <line
                     key={lineIdx}
@@ -94,7 +114,7 @@ export function SignalConstellation() {
       </motion.div>
 
       <motion.div
-        className="absolute inset-x-0 top-[8%] h-[40rem] bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.05),transparent_58%)] opacity-40"
+        className="absolute inset-x-0 top-[8%] h-[40rem] bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.05),transparent_58%)] opacity-30 md:opacity-40"
         style={{ y: fastY }}
       />
     </div>
