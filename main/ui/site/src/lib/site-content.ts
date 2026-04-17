@@ -25,8 +25,8 @@ export const navItems = [
 ] as const;
 
 export const heroMetrics = [
-  { label: "Engineered Features", value: "449 player-level signals in the current CS2 stack" },
-  { label: "Benchmark Shape", value: "Suspicious slices rise while legit and pro stress-test slices stay quiet" },
+  { label: "Training Corpus", value: "894 labeled matches spanning cheater, normal legit, and pro stress-test slices" },
+  { label: "Encounter Scale", value: "281,792 encounter rows feed the current CNN and player-level ranking stack" },
   { label: "Review Output", value: "Ranked players, evidence, and reasons for review instead of verdict language" },
 ] as const;
 
@@ -45,7 +45,7 @@ export const featureCards = [
   },
   {
     title: "Behavior signals",
-    body: "The current stack builds hundreds of player-level signals plus deeper encounter timing channels to study how suspicious behavior unfolds inside real rounds.",
+    body: "The current stack builds hundreds of player-level signals plus deeper encounter timing channels from usercmd-style mouse deltas, view-angle response, aim collapse, angular jerk, and recoil-settling behavior.",
     icon: Radar,
   },
   {
@@ -67,8 +67,8 @@ export const capabilityBands = [
     icon: Crosshair,
   },
   {
-    title: "Behavior-first scoring",
-    body: "The stack studies timing, aim process, visibility pressure, and context instead of leaning on one loud metric.",
+    title: "Control-path telemetry",
+    body: "The stack can follow usercmd-derived mouse behavior, how those inputs translate into view-angle movement, crosshair acceleration, aim collapse, and post-acquire settling.",
     icon: Activity,
   },
   {
@@ -82,13 +82,13 @@ export const workflowSteps = [
   {
     step: "01",
     title: "Parse and structure",
-    body: "Raw demos are turned into event, engagement, and encounter data that can be compared consistently across players and rounds.",
+    body: "Raw demos are turned into event, engagement, and encounter data. A single match expands into hundreds of encounter windows and thousands of tick-aligned measurements before ranking begins.",
     icon: GitBranch,
   },
   {
     step: "02",
     title: "Build hundreds of behavior signals",
-    body: "The current stack uses 449 player-level engineered features, plus encounter timing and control-path channels feeding deeper model paths.",
+    body: "The current stack uses 449 player-level engineered features, plus encounter timing and control-path channels built from mouse delta, aim process, visibility transitions, and crosshair movement.",
     icon: Bot,
   },
   {
@@ -162,18 +162,39 @@ export const proofCards = [
     image: "/assets/proof-pack/benchmark_top1_vs_top3_scatter.png",
   },
   {
-    eyebrow: "Behavior space",
-    title: "OOF behavior-space separation is meaningful without pretending the classes are trivially separable",
-    body: "The encounter-model channel carries most of the separation while the second axis adds supporting structure. That is a healthier picture than a fake-clean split: there is real signal, but the problem still behaves like a hard classification problem.",
-    image: "/assets/proof-pack/oof_behavior_scatter.png",
+    eyebrow: "Control path",
+    title: "Usercmd-derived mouse and crosshair behavior diverge across cheater, normal, and pro benchmark slices",
+    body: "These panels come from mouse-delta and crosshair-process aggregates built out of encounter windows. They show why control-path telemetry matters: suspicious slices are not just louder in score space, they behave differently in input and aim process too.",
+    image: "/assets/proof-pack/control_path_bucket_boxplots.png",
   },
   {
-    eyebrow: "Threshold policy",
-    title: "Threshold choice trades false-positive restraint against suspicious-case coverage",
-    body: "A stricter threshold improves precision but reduces coverage. Operationally, this means NullCS behaves more like a tunable review-prioritization system than a fixed binary detector.",
-    image: "/assets/proof-pack/threshold_tradeoff.png",
+    eyebrow: "Control features",
+    title: "Input-stability, mouse-delta, and angular-jerk features carry real separating power on their own",
+    body: "This is not a one-metric story. Usercmd-derived mouse behavior, quiet-after-acquire behavior, and angular-jerk features all show measurable lift by themselves before they are folded into the full ranking model.",
+    image: "/assets/proof-pack/control_path_feature_auc.png",
+  },
+  {
+    eyebrow: "System pipeline",
+    title: "The ranking stack stays readable from raw demo to encounter CNN to final XGBoost ranking",
+    body: "The pipeline is not hidden behind a vague model label. Demos are parsed, events and encounters are built, temporal control-path windows feed the encounter CNN, those outputs are aggregated with player features, and the final ranking model produces review-ready ordering and evidence.",
+    image: "/assets/proof-pack/pipeline_review_flow.png",
+  },
+  {
+    eyebrow: "Training scale",
+    title: "The current stack is trained on roughly one thousand matches, which expands into hundreds of thousands of modeled encounters",
+    body: "The data scale matters because a single CS2 match is not one row. It becomes many encounter windows, control-path sequences, player aggregates, and benchmark slices. That is what allows the model to study hard cases instead of just memorizing clips.",
+    image: "/assets/proof-pack/training_data_scale.png",
   },
 ] as const;
+
+export const proofExample = {
+  eyebrow: "Granular example",
+  title: "NullCS can inspect control-path behavior deeply enough to see when a player looks too efficient, not just loud.",
+  body: "This benchmark example is built from encounter-level mouse and crosshair-process aggregates. Normal players tend to be coarser and noisier, pros tend to be more efficient, and suspicious slices can start looking efficient in a different way: less corrective burst, less manual oversteer, and cleaner settling than expected for the difficulty of the encounter. That is the kind of control-path evidence NullCS is trying to surface.",
+  caption:
+    "The key point is not that one bar proves cheating. It is that NullCS can inspect the process behind the aim, not just the outcome.",
+  image: "/assets/proof-pack/top1_control_band_comparison.png",
+} as const;
 
 export const clientRoadmap = [
   "Local demo review workflow",
