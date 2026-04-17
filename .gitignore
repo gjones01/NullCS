@@ -87,6 +87,8 @@ REPO_MAP.md
 
 # Public repo exclusions: private docs, desktop app, and generated promo assets
 main/ui/**
+!main/ui/site/
+!main/ui/site/**
 docs/codex_handoff_2026-04-05.md
 docs/desktop_alpha_plan.md
 docs/dev_setup.md
