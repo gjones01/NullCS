@@ -8,8 +8,8 @@ export function CapabilitiesGrid() {
     <SectionShell
       id="capabilities"
       eyebrow="Capabilities"
-      title="Core ideas presented like a product, grounded like research."
-      description="The first public version of the site highlights what the system actually does without pretending the project is already a finished SaaS platform."
+      title="What the current stack actually does."
+      description="The public version is meant to show the real system shape: demo input, behavior signals, ranked output, and evidence for review."
     >
       <div className="grid gap-5 md:grid-cols-2">
         {featureCards.map((card, index) => (

@@ -8,7 +8,7 @@ export function DesktopSoon() {
     <SectionShell
       eyebrow="Desktop Application"
       title="Local review application in development."
-      description="The public site is live first. The desktop review surface is planned as a separate experience for local workflow, evidence inspection, and future download delivery."
+      description="The public site is live first. The desktop client is still being built as the local review workflow for deeper evidence inspection."
     >
       <div className="grid gap-5 lg:grid-cols-[1.1fr_0.9fr]">
         <div className="rounded-[2rem] border border-white/10 bg-[linear-gradient(180deg,rgba(217,122,74,0.12),rgba(9,11,18,0.95))] p-8">
@@ -17,7 +17,7 @@ export function DesktopSoon() {
           </div>
           <h3 className="mt-6 font-display text-3xl tracking-[-0.05em] text-white">Desktop client coming soon</h3>
           <p className="mt-4 max-w-xl text-sm leading-7 text-zinc-300">
-            Download support is not part of this first public release. The downloadable review client has its own page and is being framed as active development, not as a broken CTA.
+            Download support is not part of this first public release. The desktop client remains the planned local workflow for deeper review and evidence inspection.
           </p>
           <div className="mt-8 flex flex-wrap gap-3 text-sm text-zinc-300">
             <span className="rounded-full border border-white/10 bg-white/[0.04] px-4 py-2">Local review workflow</span>

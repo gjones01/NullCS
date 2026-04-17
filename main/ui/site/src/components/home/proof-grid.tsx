@@ -9,8 +9,8 @@ export function ProofGrid() {
     <SectionShell
       id="proof"
       eyebrow="Proof and Benchmarks"
-      title="Benchmark views that show what is separating, where it is separating, and why that matters."
-      description="These plots are meant to be read as model-behavior evidence rather than decorative proof. The goal is to show how suspicious benchmark slices move away from legit and pro baselines, how that separation behaves at the demo and row level, and what the threshold tradeoff implies for a review-oriented deployment."
+      title="Benchmark views that show where the current system is actually separating."
+      description="These plots are there to show how suspicious slices behave against legit and pro baselines, not to decorate the page."
     >
       <Reveal>
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -43,7 +43,7 @@ export function ProofGrid() {
                 <div className="p-6">
                   <div className="text-[0.7rem] uppercase tracking-[0.24em] text-zinc-500">{card.eyebrow}</div>
                   <h3 className="mt-3 font-display text-2xl tracking-[-0.04em] text-white">{card.title}</h3>
-                  <p className="mt-3 text-sm leading-7 text-zinc-400">{card.body}</p>
+                  <p className="mt-3 text-sm leading-6 text-zinc-400">{card.body}</p>
                 </div>
               </article>
             </HoverPanel>

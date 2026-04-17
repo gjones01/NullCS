@@ -9,8 +9,8 @@ export function ResearchCta() {
   return (
     <SectionShell
       eyebrow="Technical Credibility"
-      title="Public-facing presentation with room for actual depth."
-      description="The website positions NullCS as a serious technical project: research-driven, explainable, and extendable into a larger application stack."
+      title="Repository, benchmarks, and ongoing work."
+      description="NullCS is public as a real technical project now. The repository and benchmark pages are the best entry points into the current state of the work."
     >
       <div className="grid gap-5 lg:grid-cols-[0.9fr_1.1fr]">
         <Reveal>
@@ -18,7 +18,7 @@ export function ResearchCta() {
           <div className="text-[0.72rem] uppercase tracking-[0.24em] text-zinc-500">Repository</div>
           <h3 className="mt-4 font-display text-3xl tracking-[-0.05em] text-white">Explore the GitHub repository</h3>
           <p className="mt-4 text-sm leading-7 text-zinc-400">
-            Use this as the main public technical entry point while the larger product surface is still being built out.
+            The project is still evolving. Use the repo to inspect the current pipeline, benchmark artifacts, and model work as it continues to improve.
           </p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <Link href={githubUrl} target="_blank" rel="noreferrer">
