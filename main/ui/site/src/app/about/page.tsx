@@ -1,9 +1,6 @@
 import Image from "next/image";
-import Link from "next/link";
-import { ArrowUpRight, Github } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Chip } from "@/components/ui/chip";
-import { aboutPrinciples, benchmarkStats, githubUrl } from "@/lib/site-content";
+import { aboutPrinciples, benchmarkStats } from "@/lib/site-content";
 
 const sections = [
   {
@@ -158,46 +155,6 @@ export default function AboutPage() {
               ))}
             </div>
           </article>
-        </div>
-      </section>
-
-      <section className="py-20 sm:py-28">
-        <div className="container grid gap-5 lg:grid-cols-[1.05fr_0.95fr]">
-          <div className="rounded-[2rem] border border-white/10 bg-[linear-gradient(180deg,rgba(217,122,74,0.12),rgba(9,11,18,0.98))] p-8">
-            <div className="text-[0.72rem] uppercase tracking-[0.22em] text-zinc-500">Project direction</div>
-            <h2 className="mt-4 font-display text-4xl tracking-[-0.06em] text-white">Public site now, deeper review tooling next.</h2>
-            <p className="mt-4 max-w-2xl text-sm leading-7 text-zinc-300">
-              The current release is meant to communicate the benchmark story, the modeling direction, and the technical
-              depth behind NullCS. The next milestone is not a bigger claim. It is a better review surface.
-            </p>
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <Link href={githubUrl} target="_blank" rel="noreferrer">
-                <Button size="lg">
-                  <Github className="h-4 w-4" />
-                  View GitHub
-                </Button>
-              </Link>
-              <Link href="/">
-                <Button size="lg" variant="secondary">
-                  Back to homepage
-                  <ArrowUpRight className="h-4 w-4" />
-                </Button>
-              </Link>
-            </div>
-          </div>
-          <div className="overflow-hidden rounded-[2rem] border border-white/10 bg-[#090b12] shadow-panel">
-            <div className="relative aspect-[4/3]">
-              <Image src="/assets/UIPopUp.PNG" alt="NullCS UI concept panel" fill className="object-cover object-center opacity-80" />
-              <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(7,9,14,0.08),rgba(7,9,14,0.88))]" />
-            </div>
-            <div className="p-6">
-              <div className="text-[0.72rem] uppercase tracking-[0.22em] text-zinc-500">Next milestone</div>
-              <p className="mt-3 text-sm leading-7 text-zinc-400">
-                The next step is a stronger review surface: clearer evidence panels, richer benchmark modules, and better
-                operator-facing workflows once they are ready to ship cleanly.
-              </p>
-            </div>
-          </div>
         </div>
       </section>
     </div>
