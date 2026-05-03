@@ -1,9 +1,16 @@
 from pathlib import Path
 import os
 import subprocess
+import sys
+
+MAIN_ROOT = Path(__file__).resolve().parents[2]
+if str(MAIN_ROOT) not in sys.path:
+    sys.path.insert(0, str(MAIN_ROOT))
+
+from src.utils.project_paths import newanubis_awpy_exe
 
 # --- CONFIG ---
-AWPY_EXE = Path(r"C:\NullCS\NewAnubisTri\.venv\Scripts\awpy.exe")
+AWPY_EXE = newanubis_awpy_exe()
 MAP_NAME = "de_dust2"
 
 AWPY_HOME = Path(os.environ.get("AWPY_HOME", str(Path.home() / ".awpy")))

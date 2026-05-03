@@ -1,37 +1,57 @@
 # NullCS
 
-NullCS is a machine learning research project for behavioral review in Counter-Strike demos.
+NullCS is a machine learning project for behavioral review in Counter-Strike demos.
 
-The project studies whether suspicious behavior can be surfaced from tick-level demo data in a way that is measurable, explainable, and conservative around false positives. The system is built for match-relative triage and analyst review, not automated enforcement or one-click verdicts.
+The project studies whether suspicious behavior can be surfaced from tick-level demo data in a way that is measurable, explainable, and conservative around false positives. The current product direction is a local desktop review app for `.dem` files, not a live anti-cheat or automated ban system.
+
+## Desktop Beta
+
+The usable entrypoint is now the NullCS desktop app:
+
+1. Open the desktop app.
+2. Drop in one Counter-Strike `.dem` file.
+3. Run local analysis.
+4. Review the ranked Players tab.
+5. Inspect reports for players that need deeper review.
+
+The desktop app accepts `.dem` files only. It does not analyze videos, screenshots, scoreboard images, or live matches.
+
+The beta installer should be distributed through GitHub Releases, not committed directly to the repository. The current Windows installer is built locally at:
+
+```text
+main/ui/web/src-tauri/target/release/bundle/nsis/NullCS_0.1.0-alpha.1_x64-setup.exe
+```
+
+That file is intentionally ignored because it is a large release artifact. Upload it as a release asset when publishing a beta.
+
+## Project Site
+
+This repo has a GitHub Pages-ready project page in `docs/`.
+
+To publish it:
+
+1. Open the repo on GitHub.
+2. Go to `Settings -> Pages`.
+3. Choose `Deploy from a branch`.
+4. Select `main`.
+5. Select `/docs`.
+
+The landing page source is `docs/index.md`.
 
 ## Start Here
 
 If you are visiting the repo for the first time, read these in order:
 
-1. `docs/research_snapshot.md`
-   High-level benchmark story, current findings, and public-safe plots
-2. `docs/model_stack.md`
-   What the modeling pipeline is actually trying to do
-3. `docs/benchmark_methodology.md`
+1. `docs/index.md`
+   Public landing page, desktop beta direction, and benchmark summary
+2. `docs/proof.md`
+   Short proof and benchmark story
+3. `docs/model.md`
+   Public-safe model and pipeline overview
+4. `docs/benchmark_methodology.md`
    How to interpret the benchmark slices and why quiet legit/pro behavior matters
-4. `docs/public_repo_scope.md`
+5. `docs/scope.md`
    What this public repo includes and what stays private
-
-## What This Public Repo Covers
-
-This repo is the public-safe research side of NullCS:
-
-- feature engineering for player-level and encounter-level behavioral signals
-- stacked modeling experiments for match-relative player ranking
-- benchmark methodology and public-safe benchmark summaries
-- selected plots, charts, and written findings
-
-This repo intentionally avoids shipping:
-
-- raw demos and private match artifacts
-- processed local artifacts and private datasets
-- model binaries and internal evidence exports
-- local product packaging and private operational codepaths
 
 ## Current Public-Safe Read
 
@@ -43,55 +63,30 @@ The strongest current high-level benchmark story is:
 
 Public-safe benchmark summary:
 
-- suspicious benchmark median / mean top-ranked signal: `0.748 / 0.654`
-- normal legit median / mean top-ranked signal: `0.0073 / 0.0093`
-- pro stress-test median / mean top-ranked signal: `0.0073 / 0.0074`
-- suspicious benchmark top-1 / top-3 retrieval: `0.60 / 0.90`
+- suspicious benchmark median / mean top-ranked signal: `0.030 / 0.060`
+- normal legit median / mean top-ranked signal: `0.0031 / 0.0037`
+- pro stress-test median / mean top-ranked signal: `0.0034 / 0.0040`
+- suspicious benchmark top-1 / top-3 retrieval: `0.575 / 0.875`
 
-That is the shape you want from a behavioral review system. The goal is not to call someone a cheater from one score. The goal is to surface the players who deserve deeper review while minimizing false positives on strong legitimate players.
+In plain English, the benchmark is checking whether NullCS puts suspicious benchmark players near the front of the review queue while staying quiet on normal legitimate and pro demos. Top-3 retrieval matters because this is a review tool: the goal is to decide who deserves inspection first, not to let one score replace human review.
 
-See:
+## Public Repo Scope
 
-- `docs/research_snapshot.md`
-- `docs/benchmark_methodology.md`
+This repo is the public-safe side of NullCS:
 
-## What To Look At
+- desktop beta source for the local review app
+- feature engineering and model-pipeline source that is safe to publish
+- benchmark methodology and public-safe benchmark summaries
+- selected plots, charts, and written findings
 
-If you want the shortest useful summary of the project:
+This repo intentionally avoids shipping:
 
-- look at the benchmark slice plots in `docs/research_snapshot.md`
-- read the stacked-model overview in `docs/model_stack.md`
-- read `docs/public_repo_scope.md` to understand what is intentionally omitted from the public repo
+- raw demos and private match artifacts
+- processed local artifacts and private datasets
+- private uploads and internal evidence exports
+- generated build outputs, installer binaries, and local caches
+- secrets, tokens, and environment-specific config
 
-## Research Direction
+## Release Notes
 
-NullCS currently centers on a stacked review pipeline:
-
-1. parse tick-level demo data
-2. build encounter-level and player-level behavioral features
-3. score players with a match-relative ranking model
-4. study where suspicious cases separate from held-out legit and pro slices
-
-The project has also explored encounter-level temporal modeling, including a temporal CNN path. That line remains useful research infrastructure, but the main public story is still the benchmark behavior of the broader stacked review system.
-
-See:
-
-- `docs/model_stack.md`
-- `docs/cnn_experiments.md`
-
-## Repo Guide
-
-- `docs/research_snapshot.md`
-  Public-safe benchmark summary and current findings
-
-- `docs/model_stack.md`
-  End-to-end explanation of the modeling approach
-
-- `docs/benchmark_methodology.md`
-  How the benchmark slices and metrics are framed
-
-- `docs/cnn_experiments.md`
-  Encounter-level temporal modeling notes
-
-- `docs/public_repo_scope.md`
-  What is intentionally public here and what is kept private
+The installer belongs in GitHub Releases. GitHub blocks normal Git files over 100 MB, and the current installer is roughly 320 MB. Commit source and documentation to Git; upload the `.exe` as a release asset.

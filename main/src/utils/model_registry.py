@@ -4,7 +4,7 @@ from pathlib import Path
 
 
 def _candidate_models(models_dir: Path) -> list[Path]:
-    bad_tokens = ("best_params", "gridcv_results", "calibrator")
+    bad_tokens = ("best_params", "gridcv_results", "calibrator", "summary", "manifest", "curve", "report")
     out = []
     for p in models_dir.glob("*.json"):
         name = p.name.lower()

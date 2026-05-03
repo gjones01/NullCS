@@ -72,10 +72,10 @@ These summaries are enough to communicate the project direction without exposing
 
 At the time of writing, the public benchmark story is:
 
-- suspicious benchmark median / mean top-ranked signal: `0.748 / 0.654`
-- normal legit median / mean top-ranked signal: `0.0073 / 0.0093`
-- pro stress-test median / mean top-ranked signal: `0.0073 / 0.0074`
-- suspicious benchmark top-1 / top-3 retrieval: `0.60 / 0.90`
+- suspicious benchmark median / mean top-ranked signal: `0.030 / 0.060`
+- normal legit median / mean top-ranked signal: `0.0031 / 0.0037`
+- pro stress-test median / mean top-ranked signal: `0.0034 / 0.0040`
+- suspicious benchmark top-1 / top-3 retrieval: `0.575 / 0.875`
 
 These values are not presented as enforcement thresholds. They are compact evidence that the current stack is louder on suspicious benchmark cases while staying restrained on strong legitimate slices.
 
@@ -117,5 +117,4 @@ The benchmark should be read like this:
 - suspicious benchmark slices should be visually and numerically louder
 - legit and pro slices should stay visually and numerically quiet
 - the project is strongest when both are true at once
-
 

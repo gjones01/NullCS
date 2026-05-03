@@ -3,12 +3,19 @@ from __future__ import annotations
 from pathlib import Path
 import os, struct, zipfile, json
 import numpy as np
+import sys
 
-AWPY_EXE = Path(r"C:\NullCS\NewAnubisTri\.venv\Scripts\awpy.exe")
+MAIN_ROOT = Path(__file__).resolve().parents[2]
+if str(MAIN_ROOT) not in sys.path:
+    sys.path.insert(0, str(MAIN_ROOT))
+
+from src.utils.project_paths import PARSED_ZIPS_ROOT, newanubis_awpy_exe
+
+AWPY_EXE = newanubis_awpy_exe()
 AWPY_HOME = Path(os.environ.get("AWPY_HOME", str(Path.home() / ".awpy")))
 TRIS_DIR = AWPY_HOME / "tris"
 
-ZIP_PATH = Path(r"C:\NullCS\parsed_zips\Normal001.zip")  # change demo here
+ZIP_PATH = PARSED_ZIPS_ROOT / "Normal001.zip"  # change demo here
 
 
 def get_map_name_from_zip(zip_path: Path) -> str:

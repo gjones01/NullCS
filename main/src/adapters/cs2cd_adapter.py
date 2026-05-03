@@ -4,11 +4,18 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+import sys
 
 import pandas as pd
 
+MAIN_ROOT = Path(__file__).resolve().parents[2]
+if str(MAIN_ROOT) not in sys.path:
+    sys.path.insert(0, str(MAIN_ROOT))
 
-DATA_ROOT = Path(r"C:\NullCS\huggfacedata")
+from src.utils.project_paths import HUGGFACE_DATA_ROOT
+
+
+DATA_ROOT = HUGGFACE_DATA_ROOT
 SPLITS = ("no_cheater_present", "with_cheater_present")
 
 
@@ -22,6 +29,7 @@ class CS2CDMatch:
     map_name: str
     cheater_ids: set[str]
     kills: pd.DataFrame
+    damages: pd.DataFrame
     shots: pd.DataFrame
     rounds: pd.DataFrame
 
@@ -182,12 +190,61 @@ def _shots_table(events_json: dict[str, Any]) -> pd.DataFrame:
     return pd.DataFrame(out)
 
 
+def _damages_table(events_json: dict[str, Any]) -> pd.DataFrame:
+    rows = events_json.get("bullet_damage")
+    if not isinstance(rows, list):
+        return pd.DataFrame(
+            columns=[
+                "tick",
+                "round_num",
+                "attacker_steamid",
+                "victim_steamid",
+                "distance",
+                "in_air",
+                "no_scope",
+                "num_penetrations",
+                "damage_dir_x",
+                "damage_dir_y",
+                "damage_dir_z",
+            ]
+        )
+
+    rounds_df = _round_table(events_json)
+    round_starts = [int(x) for x in rounds_df["start_tick"].dropna().tolist()] if not rounds_df.empty else []
+    out = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        tick = row.get("tick")
+        attacker = str(row.get("attacker_steamid", "")).strip()
+        victim = str(row.get("victim_steamid", "")).strip()
+        if tick is None or not attacker or not victim:
+            continue
+        out.append(
+            {
+                "tick": int(tick),
+                "round_num": _assign_round_num(int(tick), round_starts),
+                "attacker_steamid": attacker,
+                "victim_steamid": victim,
+                "distance": float(row.get("distance", float("nan"))),
+                "in_air": bool(row.get("in_air", False)),
+                "no_scope": bool(row.get("no_scope", False)),
+                "num_penetrations": int(row.get("num_penetrations", 0) or 0),
+                "damage_dir_x": float(row.get("damage_dir_x", float("nan"))),
+                "damage_dir_y": float(row.get("damage_dir_y", float("nan"))),
+                "damage_dir_z": float(row.get("damage_dir_z", float("nan"))),
+            }
+        )
+    return pd.DataFrame(out)
+
+
 def load_match(split: str, match_id: str) -> CS2CDMatch:
     ticks_df = _read_ticks(split, match_id)
     events_json = _read_events(split, match_id)
     map_name = _map_name(events_json)
     cheater_ids = _extract_cheaters(events_json)
     kills = _kills_table(events_json, map_name)
+    damages = _damages_table(events_json)
     shots = _shots_table(events_json)
     rounds = _round_table(events_json)
     demo_id = f"CS2CD_{split}_{match_id}"
@@ -200,6 +257,7 @@ def load_match(split: str, match_id: str) -> CS2CDMatch:
         map_name=map_name,
         cheater_ids=cheater_ids,
         kills=kills,
+        damages=damages,
         shots=shots,
         rounds=rounds,
     )

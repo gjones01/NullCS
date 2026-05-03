@@ -24,17 +24,17 @@ This means the current system behaves more like a match-relative anomaly and rev
 
 Current public-safe summary values:
 
-- suspicious benchmark median top-ranked signal: `0.748`
-- suspicious benchmark mean top-ranked signal: `0.654`
-- normal legit median top-ranked signal: `0.0073`
-- normal legit mean top-ranked signal: `0.0093`
-- pro stress-test median top-ranked signal: `0.0073`
-- pro stress-test mean top-ranked signal: `0.0074`
+- suspicious benchmark median top-ranked signal: `0.030`
+- suspicious benchmark mean top-ranked signal: `0.060`
+- normal legit median top-ranked signal: `0.0031`
+- normal legit mean top-ranked signal: `0.0037`
+- pro stress-test median top-ranked signal: `0.0034`
+- pro stress-test mean top-ranked signal: `0.0040`
 
 High-level suspicious benchmark retrieval:
 
-- top-1 retrieval: `0.60`
-- top-3 retrieval: `0.90`
+- top-1 retrieval: `0.575`
+- top-3 retrieval: `0.875`
 
 These are match-relative triage outputs, not verdicts. The important shape is that suspicious slices stay much louder while legit and pro slices remain compressed near zero.
 

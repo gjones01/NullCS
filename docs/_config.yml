@@ -1,0 +1,10 @@
+title: NullCS
+description: Behavioral review research for Counter-Strike demos
+theme: minima
+markdown: kramdown
+header_pages:
+  - index.md
+  - proof.md
+  - model.md
+  - scope.md
+  - github_pages_setup.md

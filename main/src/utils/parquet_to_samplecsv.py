@@ -4,18 +4,20 @@ from pathlib import Path
 import zipfile
 import io
 
+PROJECT_ROOT = Path(__file__).resolve().parents[3]
+
 # =========================
 # CONFIG (edit these only)
 # =========================
 
 # Option A: direct parquet file path
-PARQUET_PATH = Path(r"C:\NullCS\some_folder\kills.parquet")
+PARQUET_PATH = PROJECT_ROOT / "some_folder" / "kills.parquet"
 
 # Option B: parquet inside a zip (set ZIP_PATH and INNER_PARQUET_NAME)
-# ZIP_PATH = Path(r"C:\NullCS\parsed_zips\Normal002.zip")
+# ZIP_PATH = PROJECT_ROOT / "parsed_zips" / "Normal002.zip"
 # INNER_PARQUET_NAME = "kills.parquet"
 
-OUT_CSV_PATH = Path(r"C:\NullCS\main\data\samples\kills_sample.csv")
+OUT_CSV_PATH = PROJECT_ROOT / "main" / "data" / "samples" / "kills_sample.csv"
 
 # How to sample:
 N_ROWS = 10_000            # number of rows to output

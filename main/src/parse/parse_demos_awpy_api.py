@@ -7,12 +7,23 @@ import tempfile
 import traceback
 import json
 
-# ---- CONFIG ----
-NORMAL_DIR = Path(r"C:\NullCS\LegitDemos\NormalRenamed")
-PRO_DIR    = Path(r"C:\NullCS\LegitDemos\ProsRenamed")
-CHEATER_DIR = Path(r"C:\NullCS\CheaterDemos")  # optional later
+MAIN_ROOT = Path(__file__).resolve().parents[2]
+if str(MAIN_ROOT) not in sys.path:
+    sys.path.insert(0, str(MAIN_ROOT))
 
-OUT_ROOT = Path(r"C:\NullCS\parsed_zips")  # outputs: <DemoStem>.zip
+from src.utils.project_paths import (
+    CHEATER_DEMOS_ROOT,
+    LEGIT_NORMAL_RENAMED_ROOT,
+    LEGIT_PRO_RENAMED_ROOT,
+    PARSED_ZIPS_ROOT,
+)
+
+# ---- CONFIG ----
+NORMAL_DIR = LEGIT_NORMAL_RENAMED_ROOT
+PRO_DIR = LEGIT_PRO_RENAMED_ROOT
+CHEATER_DIR = CHEATER_DEMOS_ROOT  # optional later
+
+OUT_ROOT = PARSED_ZIPS_ROOT  # outputs: <DemoStem>.zip
 MAX_DEMOS = None
 
 IGNORE_DIR_NAMES = {"_tmp_extract", "tmp_extract", "__pycache__"}

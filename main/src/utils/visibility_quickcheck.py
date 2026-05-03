@@ -3,13 +3,14 @@ import sys
 import zipfile, io
 import polars as pl
 
-# Add: C:\NullCS\main\src to sys.path
-SRC_DIR = Path(r"C:\NullCS\main\src")
-sys.path.insert(0, str(SRC_DIR))
+MAIN_ROOT = Path(__file__).resolve().parents[2]
+if str(MAIN_ROOT) not in sys.path:
+    sys.path.insert(0, str(MAIN_ROOT))
 
 from utils.visibility_awpy import map_name_from_zip, tri_path_for_map, is_visible, Point3
+from utils.project_paths import PARSED_ZIPS_ROOT
 
-ZIP_PATH = Path(r"C:\NullCS\parsed_zips\Normal001.zip")
+ZIP_PATH = PARSED_ZIPS_ROOT / "Normal001.zip"
 
 def main():
     map_name = map_name_from_zip(ZIP_PATH)

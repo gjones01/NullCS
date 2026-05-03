@@ -4,14 +4,21 @@ from pathlib import Path
 import json
 import zipfile
 import io
+import sys
 
 import polars as pl
+
+MAIN_ROOT = Path(__file__).resolve().parents[2]
+if str(MAIN_ROOT) not in sys.path:
+    sys.path.insert(0, str(MAIN_ROOT))
+
+from src.utils.project_paths import PARSED_ZIPS_ROOT, PROCESSED_DEMOS_ROOT
 
 # =========================
 # CONFIG (edit these only)
 # =========================
-ZIPS_DIR = Path(r"C:\NullCS\parsed_zips")
-OUT_ROOT = Path(r"C:\NullCS\processed\demos")
+ZIPS_DIR = PARSED_ZIPS_ROOT
+OUT_ROOT = PROCESSED_DEMOS_ROOT
 
 MAX_ZIPS = None  # set to 5 for testing
 

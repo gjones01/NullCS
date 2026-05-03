@@ -14,6 +14,8 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from src.utils.scoring import top_signal_titles
 from src.utils.bootstrap_demo_ci import bootstrap_player_demo_ci
+from src.utils.project_paths import PROCESSED_ROOT
+from src.utils.behavioral_context import build_demo_interpretations, load_demo_frames
 
 
 @dataclass(frozen=True)
@@ -32,7 +34,7 @@ def default_config(mode: str = "oof") -> ExplainConfig:
     if mode not in {"oof", "insample", "infer"}:
         raise ValueError(f"Unsupported mode '{mode}'. Expected one of: oof, insample, infer.")
 
-    processed_root = Path(r"C:\NullCS\main\data\processed")
+    processed_root = PROCESSED_ROOT
     ranked_csv = processed_root / "reports" / f"ranked_player_demo_suspicion_{mode}.csv"
     if mode == "oof":
         proba_col = "proba_raw_oof"
@@ -135,13 +137,19 @@ def pick_top_player_in_demo(
 
 
 def load_engagement_features(cfg: ExplainConfig, demo_id: str) -> pd.DataFrame:
-    p = cfg.demos_root / demo_id / "engagement_features.parquet"
-    if not p.exists():
-        raise FileNotFoundError(f"Missing engagement features: {p}")
-    df = pd.read_parquet(p)
+    df, _ = load_demo_frames(demo_id, cfg.demos_root)
     if "demo_id" not in df.columns:
         df["demo_id"] = str(demo_id)
     return df
+
+
+def load_demo_context(cfg: ExplainConfig, demo_id: str) -> tuple[pd.DataFrame, pd.DataFrame]:
+    eng, enc = load_demo_frames(demo_id, cfg.demos_root)
+    if "demo_id" not in eng.columns:
+        eng["demo_id"] = str(demo_id)
+    if not enc.empty and "demo_id" not in enc.columns:
+        enc["demo_id"] = str(demo_id)
+    return eng, enc
 
 
 def build_reasons(top_row: pd.Series, eng: pd.DataFrame) -> tuple[list[dict], dict[str, pd.DataFrame]]:
@@ -327,8 +335,13 @@ def explain_demo(
     sid = str(top["attacker_steamid"]).strip()
     name = str(top.get("attacker_name", ""))
 
-    eng = load_engagement_features(cfg, demo_id)
+    eng, enc = load_demo_context(cfg, demo_id)
     reasons, evidence = build_reasons(top, eng)
+
+    ranked_demo = _read_ranked(cfg.ranked_csv)
+    ranked_demo = ranked_demo[ranked_demo["demo_id"].astype(str) == str(demo_id)].copy()
+    interpretation_map = build_demo_interpretations(ranked_demo, eng, enc)
+    interpretation = interpretation_map.get(sid)
 
     out_dir = cfg.reports_root / demo_id / sid
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -378,6 +391,7 @@ def explain_demo(
         "reasons": reasons,
         "signals": _build_signals(top),
         "evidence_files": [k for k in evidence.keys()],
+        "interpretation": interpretation,
     }
 
     (out_dir / "top_player_row.json").write_text(top.to_json(indent=2), encoding="utf-8")

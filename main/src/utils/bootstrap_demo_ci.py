@@ -13,10 +13,10 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]  # .../main
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 from src.features import aggregate_player_features as agg_mod
+from src.utils.project_paths import MODELS_ROOT
 from src.utils.scoring import ensure_no_forbidden_features, load_calibrator
 
 
-MODELS_ROOT = Path(r"C:\NullCS\main\data\processed\models")
 FEATURES_PATH = MODELS_ROOT / "xgb_player_level_features.txt"
 MODEL_PATH = MODELS_ROOT / "xgb_player_level_gridcv.json"
 

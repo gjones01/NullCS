@@ -6,8 +6,10 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+from src.utils.project_paths import MODELS_ROOT
 
-MODELS_DIR = Path(r"C:\NullCS\main\data\processed\models")
+
+MODELS_DIR = MODELS_ROOT
 CALIBRATOR_PATH = MODELS_DIR / "calibration_isotonic.pkl"
 CALIBRATION_SUMMARY_PATH = MODELS_DIR / "calibration_summary.json"
 
@@ -68,17 +70,39 @@ def apply_rt_low_evidence_downweight(risk: pd.Series, rt_n: pd.Series, min_rt: i
     return out
 
 
-def risk_band(r: float) -> str:
+def risk_band(
+    r: float,
+    rt_n: float | None = None,
+    n_kills_with_rt: float | None = None,
+    confidence: float | None = None,
+) -> str:
     x = float(r)
+    rt = float(rt_n) if rt_n is not None and pd.notna(rt_n) else 0.0
+    nk = float(n_kills_with_rt) if n_kills_with_rt is not None and pd.notna(n_kills_with_rt) else 0.0
+    conf = float(confidence) if confidence is not None and pd.notna(confidence) else 0.0
+
+    low_evidence = rt < 8.0 or nk < 5.0
     if x < 0.20:
         return "low"
-    if x < 0.50:
-        return "medium"
-    return "high"
+    if x >= 0.55 and conf >= 0.55 and not low_evidence:
+        return "high_priority"
+    return "review"
 
 
-def risk_band_series(risk: pd.Series) -> pd.Series:
-    return risk.astype(float).map(risk_band)
+def risk_band_series(
+    risk: pd.Series,
+    rt_n: pd.Series | None = None,
+    n_kills_with_rt: pd.Series | None = None,
+    confidence: pd.Series | None = None,
+) -> pd.Series:
+    rt_series = rt_n if rt_n is not None else pd.Series([np.nan] * len(risk), index=risk.index)
+    nk_series = n_kills_with_rt if n_kills_with_rt is not None else pd.Series([np.nan] * len(risk), index=risk.index)
+    conf_series = confidence if confidence is not None else pd.Series([np.nan] * len(risk), index=risk.index)
+    return pd.Series(
+        [risk_band(r, rt, nk, conf) for r, rt, nk, conf in zip(risk.astype(float), rt_series, nk_series, conf_series)],
+        index=risk.index,
+        dtype="object",
+    )
 
 
 def top_signal_titles(row: pd.Series, top_k: int = 3) -> list[dict]:
@@ -112,7 +136,13 @@ def _severity_from_score(s: float) -> str:
     return "low"
 
 
-def load_calibrator(path: Path = CALIBRATOR_PATH):
+def load_calibrator(path: Path = CALIBRATOR_PATH, model_path: Path | None = None):
+    if model_path is not None:
+        sibling = Path(model_path).with_name(f"{Path(model_path).stem}_calibration.pkl")
+        if sibling.exists():
+            path = sibling
+        else:
+            return None
     if not path.exists():
         return None
     from joblib import load
