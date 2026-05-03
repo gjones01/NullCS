@@ -6,7 +6,7 @@ title: NullCS
 
 NullCS is a machine learning project for behavioral review in Counter-Strike demos.
 
-At a high level, the project studies whether suspicious behavior can be surfaced from tick-level demo data in a way that stays measurable, explainable, and conservative around false positives. The current purpose is surfacing instances of irregular play that deserve further review, or create supporting evidence of an individual cheating.
+At a high level, the project studies whether suspicious behavior can be surfaced from tick-level demo data in a way that stays measurable, explainable, and conservative around false positives. The current purpose is to surface instances of irregular play that deserve further review and provide supporting evidence for manual inspection.
 
 [View the GitHub repository](../)<br>
 [Proof](proof.html)<br>
@@ -29,9 +29,9 @@ NullCS combines structured demo parsing, encounter-level feature engineering, pl
 
 NullCS originally stemmed from a chronic occurrence of running into rage cheaters. Everything from spinbots to inhuman aimbots. The more interesting cases, though, were players who were trying to hide it. The obvious cases are frustrating, but the closet-cheating problem is harder because the behavior is mixed into otherwise normal-looking gameplay. For context, I am not a highly skilled player grinding Premier or FaceIt each day. I am a very casual player with most matches in competitive with friends and the occasional Premier sessions. I am someone who simply loves Counter-Strike and saw this as an opportunity to apply something I am passionate about, to a game I enjoy to play.
 
-I did not start this as an attempt to build an "anti-cheat" or compete with any other ecosystems. I wanted to study whether unfair gameplay could still be surfaced from demo data when the behavior was not blatant. As of April 2026, VAC has improved(slightly) at stopping pure rage cheating, particularly spinbots, but wallhacks, aim assist, and recoil assistance are still meaningful problems in regular matches.
+I did not start this as an attempt to build an "anti-cheat" or compete with any other ecosystems. I wanted to study whether unfair gameplay could still be surfaced from demo data when the behavior was not blatant. As of April 2026, VAC has improved slightly at stopping pure rage cheating, particularly spinbots, but wallhacks, aim assist, and recoil assistance are still meaningful problems in regular matches.
 
-That made the project a useful technical challenge: take something messy and subjective, turn it into structured data, and see how far careful measurement could go without pretending the model had more certainty than it actually did. NullCS does not run live durng matches, it purely relies on .dem files for post-game analysis. Therefore, by definition, it's not an "anti-cheat" in the traditional sense.
+That made the project a useful technical challenge: take something messy and subjective, turn it into structured data, and see how far careful measurement could go without pretending the model had more certainty than it actually did. NullCS does not run live during matches; it relies on `.dem` files for post-game analysis. Therefore, by definition, it is not an "anti-cheat" in the traditional sense.
 
 ## Personal Framing
 

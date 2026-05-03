@@ -48,10 +48,6 @@ function Copy-One {
   Copy-Item -LiteralPath $From -Destination $To -Force
 }
 
-$agentsPath = Join-Path $RepoRoot "AGENTS.md"
-if (Test-Path $agentsPath) {
-  Copy-One $agentsPath (Join-Path $OutRoot "AGENTS.md")
-}
 Set-Content -LiteralPath (Join-Path $OutRoot ".nullcs-backend-root") -Value "NullCS packaged backend payload" -Encoding ASCII
 
 Copy-Tree (Join-Path $RepoRoot "main\ui\api") (Join-Path $OutRoot "main\ui\api")

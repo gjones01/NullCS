@@ -7,8 +7,7 @@ from pathlib import Path
 def _looks_like_repo_root(candidate: Path) -> bool:
     try:
         return candidate.is_dir() and (candidate / "main").is_dir() and (
-            (candidate / "AGENTS.md").exists()
-            or (candidate / ".git").exists()
+            (candidate / ".git").exists()
             or (
                 (candidate / ".nullcs-backend-root").exists()
                 and (candidate / "main" / "ui" / "api" / "main.py").is_file()

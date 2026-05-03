@@ -102,7 +102,7 @@ main/ui/web/tsconfig.tsbuildinfo
 main/ui/web/src-tauri/target/
 main/ui/web/src-tauri/gen/schemas/
 main/ui/web/src-tauri/resources/nullcs-backend/
-docs/codex_handoff_2026-04-05.md
+docs/*handoff*.md
 docs/desktop_alpha_plan.md
 docs/dev_setup.md
 docs/OWNERSHIP_MAP.md

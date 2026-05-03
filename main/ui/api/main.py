@@ -979,8 +979,8 @@ def _derive_interpretation(
         },
         "limitations": limitations,
         "model_notes": [
-            "TODO: context fit, durability, and review priority are currently heuristic-derived from available per-match features and explain outputs.",
-            "TODO: replace these placeholders with round-aware, side-aware, and opponent-aware modeling when richer DS features are available.",
+            "Context fit, durability, and review priority are derived from the available per-match features and explanation outputs.",
+            "Round-aware, side-aware, and opponent-aware modeling remain active areas for future refinement.",
         ],
     }
 
