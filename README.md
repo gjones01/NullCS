@@ -4,9 +4,14 @@ NullCS is a machine learning project for behavioral review in Counter-Strike dem
 
 The project studies whether suspicious behavior can be surfaced from tick-level demo data in a way that is measurable, explainable, and conservative around false positives. The current product direction is a local desktop review app for `.dem` files, not a live anti-cheat or automated ban system.
 
-## Desktop Beta
+## Download The Beta
 
-The usable entrypoint is now the NullCS desktop app:
+For normal users, the intended path is the Windows desktop installer from GitHub Releases:
+
+- Releases: `https://github.com/gjones01/NullCS.ai/releases`
+- Current installer asset name: `NullCS_0.1.0-alpha.1_x64-setup.exe`
+
+Install it, open NullCS, and run a local demo review:
 
 1. Open the desktop app.
 2. Drop in one Counter-Strike `.dem` file.
@@ -14,7 +19,32 @@ The usable entrypoint is now the NullCS desktop app:
 4. Review the ranked Players tab.
 5. Inspect reports for players that need deeper review.
 
-The desktop app accepts `.dem` files only. It does not analyze videos, screenshots, scoreboard images, or live matches.
+NullCS runs locally on your PC. Demo files are not uploaded to a cloud service by the desktop app.
+
+The desktop app accepts `.dem` files only. It does not analyze videos, screenshots, scoreboard images, or live matches. A player landing in Review means the demo deserves closer inspection; it does not mean a single match should be treated as the whole case.
+
+## Expected Runtime
+
+Inference time depends on demo size, round count, disk speed, CPU, and whether Windows Defender or other security tools scan the demo while it is being processed.
+
+Maintainer baseline:
+
+- CPU: Intel i5-13400F
+- GPU: NVIDIA RTX 3060 Ti
+- Memory: 32 GB DDR5
+- Platform: Windows desktop build, local inference
+
+Measured local run:
+
+| Demo size | Pipeline path | Time |
+| --- | --- | ---: |
+| 143.3 MiB `.dem` | parse + feature build + encounter NN features + XGBoost scoring + report output | 25.2 seconds |
+
+As a rough expectation, normal match demos should usually complete in under a few minutes on a similar desktop. Very large demos, slower CPUs, slower disks, or first-run security scanning can push that higher.
+
+## Build From Source
+
+Most users should use the release installer. Source builds are for contributors or anyone who wants to inspect and build the app locally.
 
 The beta installer should be distributed through GitHub Releases, not committed directly to the repository. The current Windows installer is built locally at:
 
