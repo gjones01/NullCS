@@ -42,18 +42,6 @@ Measured local run:
 
 As a rough expectation, normal match demos should usually complete in under a few minutes on a similar desktop. Very large demos, slower CPUs, slower disks, or first-run security scanning can push that higher.
 
-## Build From Source
-
-Most users should use the release installer. Source builds are for contributors or anyone who wants to inspect and build the app locally.
-
-The beta installer should be distributed through GitHub Releases, not committed directly to the repository. The current Windows installer is built locally at:
-
-```text
-main/ui/web/src-tauri/target/release/bundle/nsis/NullCS_0.1.0-alpha.1_x64-setup.exe
-```
-
-That file is intentionally ignored because it is a large release artifact. Upload it as a release asset when publishing a beta.
-
 ## Project Site
 
 This repo has a GitHub Pages-ready project page in `docs/`.
