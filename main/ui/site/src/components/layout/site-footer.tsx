@@ -8,7 +8,7 @@ export function SiteFooter() {
         <div>
           <div className="font-display text-lg tracking-[-0.04em] text-white">NullCS</div>
           <p className="mt-2 max-w-xl text-sm leading-6 text-zinc-500">
-            Counter-Strike 2 behavioral review research focused on structured demo analysis, explainable signals, and future review tooling.
+            Counter-Strike 2 behavioral review research focused on structured demo analysis, explainable signals, and local desktop review tooling.
           </p>
         </div>
         <div className="flex flex-wrap gap-4 text-sm text-zinc-400">
