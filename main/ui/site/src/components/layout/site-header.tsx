@@ -42,7 +42,7 @@ export function SiteHeader() {
           href="/beta"
           className="hidden rounded-full border border-white/12 bg-white/[0.04] px-5 py-3 text-sm text-zinc-100 transition-colors hover:bg-white/[0.08] md:inline-flex"
         >
-          Beta soon
+          Download beta
         </Link>
 
         <button

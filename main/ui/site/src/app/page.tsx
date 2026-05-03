@@ -1,6 +1,5 @@
 import { BetaTeaser } from "@/components/home/beta-teaser";
 import { CapabilitiesGrid } from "@/components/home/capabilities-grid";
-import { DesktopSoon } from "@/components/home/desktop-soon";
 import { Hero } from "@/components/home/hero";
 import { ProofGrid } from "@/components/home/proof-grid";
 import { ProjectIntro } from "@/components/home/project-intro";
@@ -19,7 +18,6 @@ export default function HomePage() {
       <WorkflowStrip />
       <BetaTeaser />
       <ResearchCta />
-      <DesktopSoon />
     </>
   );
 }

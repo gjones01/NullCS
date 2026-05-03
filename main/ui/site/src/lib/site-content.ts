@@ -19,8 +19,7 @@ export const navItems = [
   { href: "/#capabilities", label: "Capabilities" },
   { href: "/#proof", label: "Proof" },
   { href: "/#workflow", label: "Workflow" },
-  { href: "/beta", label: "Beta" },
-  { href: "/client", label: "Client" },
+  { href: "/beta", label: "Beta Client" },
   { href: "/about", label: "About" },
 ] as const;
 
@@ -31,10 +30,10 @@ export const heroMetrics = [
 ] as const;
 
 export const benchmarkStats = [
-  { label: "Suspicious median top-ranked signal", value: "0.748" },
-  { label: "Normal legit median top-ranked signal", value: "0.0073" },
-  { label: "Pro stress-test median top-ranked signal", value: "0.0073" },
-  { label: "Suspicious top-3 retrieval", value: "0.90" },
+  { label: "Suspicious median top-ranked signal", value: "0.030" },
+  { label: "Normal legit median top-ranked signal", value: "0.0031" },
+  { label: "Pro stress-test median top-ranked signal", value: "0.0034" },
+  { label: "Suspicious top-3 retrieval", value: "0.875" },
 ] as const;
 
 export const featureCards = [
@@ -122,8 +121,7 @@ export const aboutPrinciples = [
 
 export const footerLinks = [
   { href: githubUrl, label: "GitHub" },
-  { href: "/beta", label: "Beta" },
-  { href: "/client", label: "Client" },
+  { href: "/beta", label: "Beta Client" },
   { href: "/about", label: "About" },
 ] as const;
 
@@ -174,12 +172,6 @@ export const proofCards = [
     image: "/assets/proof-pack/control_path_feature_auc.png",
   },
   {
-    eyebrow: "System pipeline",
-    title: "The ranking stack stays readable from raw demo to encounter CNN to final XGBoost ranking",
-    body: "The pipeline is not hidden behind a vague model label. Demos are parsed, events and encounters are built, temporal control-path windows feed the encounter CNN, those outputs are aggregated with player features, and the final ranking model produces review-ready ordering and evidence.",
-    image: "/assets/proof-pack/pipeline_review_flow.png",
-  },
-  {
     eyebrow: "Training scale",
     title: "The current stack is trained on roughly one thousand matches, which expands into hundreds of thousands of modeled encounters",
     body: "The data scale matters because a single CS2 match is not one row. It becomes many encounter windows, control-path sequences, player aggregates, and benchmark slices. That is what allows the model to study hard cases instead of just memorizing clips.",
@@ -197,7 +189,7 @@ export const proofExample = {
 } as const;
 
 export const clientRoadmap = [
-  "Local demo review workflow",
-  "Evidence browsing and ranked player inspection",
-  "Future download delivery once the review client is ready",
+  "Windows desktop beta is available through GitHub Releases",
+  "Runs locally on Counter-Strike .dem files without cloud upload",
+  "Ranks players, summarizes evidence, and opens supporting Steam or CSStats pages",
 ] as const;
