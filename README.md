@@ -100,6 +100,12 @@ Public-safe benchmark summary:
 
 In plain English, the benchmark is checking whether NullCS puts suspicious benchmark players near the front of the review queue while staying quiet on normal legitimate and pro demos. Top-3 retrieval matters because this is a review tool: the goal is to decide who deserves inspection first, not to let one score replace human review.
 
+## Acknowledgements
+
+NullCS depends heavily on [`demoparser2`](https://github.com/LaihoE/demoparser), the Counter-Strike demo parsing project maintained by LaihoE and its contributors. Their work makes it practical to turn `.dem` files into structured data that can be studied, tested, and reviewed.
+
+That project has been maintained and improved for years, and NullCS would not be possible in its current form without that foundation. Thank you to the `demoparser2` maintainers and contributors for keeping that ecosystem moving.
+
 ## Public Repo Scope
 
 This repo is the public-safe side of NullCS:
