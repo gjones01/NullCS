@@ -4,7 +4,7 @@ This document explains the public-safe modeling structure behind NullCS.
 
 ## Framing
 
-NullCS is a single-match behavioral review system. It does not try to make a final claim about whether a player is cheating. It tries to identify which players stand out enough inside a match to deserve deeper inspection.
+NullCS is a single-match behavioral review system. It does not try to make a final account-level claim from one demo. It identifies which players stand out enough inside a match to deserve deeper inspection.
 
 That distinction matters:
 
@@ -39,7 +39,7 @@ The ranking is then used as a review-priority signal.
 
 ## Why Match-Relative Ranking
 
-A strong legitimate player can look unusual in a weak lobby. A modest cheater can try to hide behind ordinary-looking headline stats. Because of that, the more useful question is often:
+A strong legitimate player can look unusual in a weak lobby. A player with abnormal behavior can also hide behind ordinary-looking headline stats. Because of that, the more useful question is often:
 
 `Who stands out most in this match, and why?`
 
@@ -108,7 +108,6 @@ NullCS is not:
 - a ban system
 - a client anti-cheat
 - a kernel or memory scanner
-- a one-score proof of cheating
+- a one-score case conclusion
 
 It is a behavioral review system built around explainable match-relative ranking.
-

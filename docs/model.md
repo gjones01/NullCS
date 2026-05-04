@@ -27,7 +27,7 @@ It turns one `.dem` file into ranked player signals, supporting metrics, and exp
 
 ## Why Match-Relative Ranking
 
-A strong legitimate player can look unusual in a weak lobby. A modest cheater can hide behind ordinary-looking headline stats. Match-relative ranking is a more honest framing for review support because it compares players inside the match before asking for deeper manual review.
+A strong legitimate player can look unusual in a weak lobby. A player with abnormal behavior can also hide behind ordinary-looking headline stats. Match-relative ranking is a more honest framing for review support because it compares players inside the match before asking for deeper manual review.
 
 ## Review Flow
 

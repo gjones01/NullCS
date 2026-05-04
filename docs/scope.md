@@ -32,7 +32,7 @@ NullCS is presented publicly as:
 - conservative about false positives
 - explicit about limits
 
-It is not presented as a live client anti-cheat or automated ban system. It is a desktop demo-review tool that can surface evidence for follow-up.
+It is not presented as a live client anti-cheat or automated ban system. It is a desktop demo-review tool that can surface match-relative signals and supporting context for follow-up.
 
 ## More Detail
 

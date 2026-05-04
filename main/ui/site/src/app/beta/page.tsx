@@ -36,7 +36,7 @@ export default function BetaPage() {
                 </Link>
                 <Link href="/#proof">
                   <Button size="lg" variant="secondary">
-                    View benchmark proof
+                    View benchmark context
                     <ArrowUpRight className="h-4 w-4" />
                   </Button>
                 </Link>

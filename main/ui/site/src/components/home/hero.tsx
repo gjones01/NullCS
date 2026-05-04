@@ -24,9 +24,9 @@ export function Hero() {
           </Reveal>
           <Reveal delay={0.12}>
             <p className="mt-6 max-w-2xl text-lg leading-8 text-zinc-400 sm:text-xl">
-              NullCS is a behavioral review project for Counter-Strike 2 demos. It ranks suspicious players from structured
-              demo signals and returns evidence that can be reviewed, especially in the harder cases where subtle cheating
-              and strong legitimate play start to look closer than they should.
+              NullCS is a behavioral review project for Counter-Strike 2 demos. It ranks match-relative standouts from
+              structured demo signals and returns evidence for review, especially in harder cases where irregular patterns
+              and strong legitimate play start to look close.
             </p>
           </Reveal>
           <Reveal delay={0.18}>

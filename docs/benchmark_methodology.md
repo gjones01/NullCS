@@ -8,7 +8,7 @@ The benchmark is intentionally framed in a way that is easy to defend publicly.
 
 The main question is not:
 
-`Can one score prove that a player is cheating?`
+`Can one score settle the case?`
 
 The main question is:
 
@@ -85,7 +85,7 @@ NullCS produces match-relative triage outputs.
 
 That means:
 
-- a higher signal does not mean proof
+- a higher signal does not settle the case
 - a lower signal does not mean innocence
 - the signal is best read as review priority inside the current match
 
@@ -117,4 +117,3 @@ The benchmark should be read like this:
 - suspicious benchmark slices should be visually and numerically louder
 - legit and pro slices should stay visually and numerically quiet
 - the project is strongest when both are true at once
-

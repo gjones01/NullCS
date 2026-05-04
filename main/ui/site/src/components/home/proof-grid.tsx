@@ -8,9 +8,9 @@ export function ProofGrid() {
   return (
     <SectionShell
       id="proof"
-      eyebrow="Proof and Benchmarks"
+      eyebrow="Benchmarks"
       title="Benchmark views that show where the current system is actually separating."
-      description="These plots are there to show how suspicious slices behave against legit and pro baselines, not to decorate the page."
+      description="These plots show how suspicious benchmark slices behave against legit and pro baselines, without turning a benchmark score into a verdict."
     >
       <Reveal>
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">

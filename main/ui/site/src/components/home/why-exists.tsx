@@ -4,7 +4,7 @@ import { Reveal } from "@/components/ui/reveal";
 
 const reasons = [
   {
-    title: "Some metrics can scream cheat",
+    title: "Some metrics can be loud",
     body: "Rage behavior, impossible-looking snaps, or repeated obvious abuse can light up a demo quickly. Those are real signals, but they are not the whole problem.",
   },
   {
@@ -12,8 +12,8 @@ const reasons = [
     body: "High-ELO and pro players produce uncomfortable rounds too. A useful system has to stay quieter there than a noisy model would, or the output stops being actionable.",
   },
   {
-    title: "Subtle cheats are the real challenge",
-    body: "Aim assist, recoil assist, and information abuse often try to stay close enough to normal play to avoid obvious signatures. That is the gap NullCS is starting to break into.",
+    title: "Subtle cases are the real challenge",
+    body: "Some irregular patterns can stay close enough to normal play to avoid obvious signatures. That is the gap NullCS is trying to study without overclaiming.",
   },
 ] as const;
 
@@ -22,7 +22,7 @@ export function WhyExists() {
     <SectionShell
       eyebrow="Why It Exists"
       title="Built to separate the loud cases from the hard ones."
-      description="Obvious abuse is not the full problem. The harder review task is telling strong legitimate play apart from lower-visibility cheating without pretending one score can settle it."
+      description="Obvious abuse is not the full problem. The harder review task is telling strong legitimate play apart from lower-visibility irregular behavior without pretending one score can settle it."
     >
       <div className="grid gap-5 md:grid-cols-3">
         {reasons.map((reason, index) => (

@@ -56,9 +56,11 @@ function initialFactIndex() {
   return Math.floor(Math.random() * loadingFacts.length);
 }
 
-export function ProcessingOverlay({ title, subtitle, steps, activeStep, logs: _logs, reducedMotion }: ProcessingOverlayProps) {
+export function ProcessingOverlay({ title, subtitle, steps, activeStep, logs, reducedMotion }: ProcessingOverlayProps) {
   const [factIndex, setFactIndex] = useState(initialFactIndex);
   const [factVisible, setFactVisible] = useState(true);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [showDetails, setShowDetails] = useState(false);
 
   useEffect(() => {
     if (reducedMotion) return;
@@ -73,6 +75,14 @@ export function ProcessingOverlay({ title, subtitle, steps, activeStep, logs: _l
     }, swapMs);
     return () => window.clearInterval(timer);
   }, [reducedMotion]);
+
+  useEffect(() => {
+    const startedAt = Date.now();
+    const timer = window.setInterval(() => {
+      setElapsedSeconds(Math.floor((Date.now() - startedAt) / 1000));
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   const activeLabel = useMemo(() => steps[Math.max(0, Math.min(activeStep, steps.length - 1))] || subtitle, [activeStep, steps, subtitle]);
 
@@ -143,6 +153,25 @@ export function ProcessingOverlay({ title, subtitle, steps, activeStep, logs: _l
               ) : null}
             </AnimatePresence>
           </div>
+
+          <div className="processing-debug-card">
+            <div>
+              <span className="eyebrow">Runtime note</span>
+              <p>
+                Elapsed {Math.floor(elapsedSeconds / 60)}:{String(elapsedSeconds % 60).padStart(2, "0")}. Large demos,
+                first-run Windows scanning, or slow disks can make parsing take several minutes.
+              </p>
+            </div>
+            {logs?.trim() ? (
+              <button className="processing-debug-toggle" type="button" onClick={() => setShowDetails((value) => !value)}>
+                {showDetails ? "Hide logs" : "Show logs"}
+              </button>
+            ) : null}
+          </div>
+
+          {showDetails && logs?.trim() ? (
+            <pre className="processing-log-output">{logs.trim().slice(-3000)}</pre>
+          ) : null}
         </motion.div>
       </div>
     </div>

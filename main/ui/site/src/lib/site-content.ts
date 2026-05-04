@@ -17,14 +17,14 @@ export const githubUrl =
 export const navItems = [
   { href: "/", label: "Overview" },
   { href: "/#capabilities", label: "Capabilities" },
-  { href: "/#proof", label: "Proof" },
+  { href: "/#proof", label: "Benchmarks" },
   { href: "/#workflow", label: "Workflow" },
   { href: "/beta", label: "Beta Client" },
   { href: "/about", label: "About" },
 ] as const;
 
 export const heroMetrics = [
-  { label: "Training Corpus", value: "894 labeled matches spanning cheater, normal legit, and pro stress-test slices" },
+  { label: "Training Corpus", value: "894 labeled matches spanning suspicious, normal legit, and pro stress-test slices" },
   { label: "Encounter Scale", value: "281,792 encounter rows feed the current CNN and player-level ranking stack" },
   { label: "Review Output", value: "Ranked players, evidence, and reasons for review instead of verdict language" },
 ] as const;
@@ -54,7 +54,7 @@ export const featureCards = [
   },
   {
     title: "Evidence output",
-    body: "Scores are paired with reasons and benchmark context so the output can support review, especially when strong legitimate play and subtle cheats start to overlap.",
+    body: "Scores are paired with reasons and benchmark context so the output can support review, especially when strong legitimate play and irregular patterns start to overlap.",
     icon: ChartColumnBig,
   },
 ] as const;
@@ -140,7 +140,7 @@ export const screenshotSlots = [
   },
   {
     eyebrow: "Research Surface",
-    title: "Proof-ready layout",
+    title: "Benchmark-ready layout",
     body: "These panels can carry benchmark plots, model outputs, and deeper behavioral visualizations without redesigning the page.",
     image: "/assets/aboutpagebg.png",
   },
@@ -161,7 +161,7 @@ export const proofCards = [
   },
   {
     eyebrow: "Control path",
-    title: "Usercmd-derived mouse and crosshair behavior diverge across cheater, normal, and pro benchmark slices",
+    title: "Usercmd-derived mouse and crosshair behavior diverge across suspicious, normal, and pro benchmark slices",
     body: "These panels come from mouse-delta and crosshair-process aggregates built out of encounter windows. They show why control-path telemetry matters: suspicious slices are not just louder in score space, they behave differently in input and aim process too.",
     image: "/assets/proof-pack/control_path_bucket_boxplots.png",
   },
@@ -184,7 +184,7 @@ export const proofExample = {
   title: "NullCS can inspect control-path behavior deeply enough to see when a player looks too efficient, not just loud.",
   body: "This benchmark example is built from encounter-level mouse and crosshair-process aggregates. Normal players tend to be coarser and noisier, pros tend to be more efficient, and suspicious slices can start looking efficient in a different way: less corrective burst, less manual oversteer, and cleaner settling than expected for the difficulty of the encounter. That is the kind of control-path evidence NullCS is trying to surface.",
   caption:
-    "The key point is not that one bar proves cheating. It is that NullCS can inspect the process behind the aim, not just the outcome.",
+    "The key point is not that one bar settles a case. It is that NullCS can inspect the process behind the aim, not just the outcome.",
   image: "/assets/proof-pack/top1_control_band_comparison.png",
 } as const;
 

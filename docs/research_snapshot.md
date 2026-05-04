@@ -8,7 +8,7 @@ NullCS is a behavioral analysis system for Counter-Strike match review. It is de
 - softened the interpretation layer so strong legitimate players are less likely to be overstated in public-facing summaries
 - added pro-level hard negatives to improve real-world separation
 - built a stacked encounter-model path for player-level ranking
-- added a benchmark harness to compare held-out legit, pro stress-test, and cheater slices
+- added a benchmark harness to compare held-out legit, pro stress-test, and suspicious slices
 
 ## Current Benchmark Read
 
@@ -16,7 +16,7 @@ The current benchmark picture is intentionally simple:
 
 - held-out normal legit demos stay very quiet
 - pro stress-test demos also stay quiet
-- cheater benchmark demos surface much more strongly at the top of the lobby
+- suspicious benchmark demos surface much more strongly at the top of the lobby
 
 This means the current system behaves more like a match-relative anomaly and review-priority layer than an absolute cheat-probability model.
 
@@ -42,9 +42,9 @@ These are match-relative triage outputs, not verdicts. The important shape is th
 
 ![Benchmark slice comparison](assets/plots/benchmark_slice_signals.png)
 
-### Cheater Retrieval Summary
+### Suspicious Player Retrieval Summary
 
-![Cheater retrieval summary](assets/plots/cheater_retrieval_summary.png)
+![Suspicious player retrieval summary](assets/plots/cheater_retrieval_summary.png)
 
 ## Model Direction
 

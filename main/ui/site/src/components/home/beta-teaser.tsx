@@ -28,7 +28,7 @@ export function BetaTeaser() {
               </Link>
               <Link href="/#proof">
                 <Button variant="secondary" size="lg">
-                  View proof
+                  View benchmarks
                   <ArrowUpRight className="h-4 w-4" />
                 </Button>
               </Link>

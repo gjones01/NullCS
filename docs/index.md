@@ -9,7 +9,7 @@ NullCS is a machine learning project for behavioral review in Counter-Strike dem
 At a high level, the project studies whether suspicious behavior can be surfaced from tick-level demo data in a way that stays measurable, explainable, and conservative around false positives. The current purpose is to surface instances of irregular play that deserve further review and provide supporting evidence for manual inspection.
 
 [View the GitHub repository](../)<br>
-[Proof](proof.html)<br>
+[Benchmarks](proof.html)<br>
 [Model](model.html)<br>
 [Desktop beta](https://github.com/gjones01/NullCS.ai/releases)
 
@@ -27,9 +27,9 @@ NullCS combines structured demo parsing, encounter-level feature engineering, pl
 
 ## Why I Built This
 
-NullCS originally stemmed from a chronic occurrence of running into rage cheaters. Everything from spinbots to inhuman aimbots. The more interesting cases, though, were players who were trying to hide it. The obvious cases are frustrating, but the closet-cheating problem is harder because the behavior is mixed into otherwise normal-looking gameplay. For context, I am not a highly skilled player grinding Premier or FaceIt each day. I am a very casual player with most matches in competitive with friends and the occasional Premier sessions. I am someone who simply loves Counter-Strike and saw this as an opportunity to apply something I am passionate about, to a game I enjoy to play.
+NullCS originally stemmed from repeatedly running into obvious abuse and then becoming more interested in harder cases that looked closer to normal gameplay. For context, I am not a highly skilled player grinding Premier or FaceIt each day. I am a casual player with most matches in competitive with friends and the occasional Premier session. I love Counter-Strike and saw this as an opportunity to apply something I am passionate about to a game I enjoy.
 
-I did not start this as an attempt to build an "anti-cheat" or compete with any other ecosystems. I wanted to study whether unfair gameplay could still be surfaced from demo data when the behavior was not blatant. As of April 2026, VAC has improved slightly at stopping pure rage cheating, particularly spinbots, but wallhacks, aim assist, and recoil assistance are still meaningful problems in regular matches.
+I did not start this as an attempt to build an "anti-cheat" or compete with any other ecosystem. I wanted to study whether irregular gameplay could be surfaced from demo data when the behavior was not blatant. As of April 2026, obvious abuse and lower-visibility assistance remain part of the regular player-review conversation.
 
 That made the project a useful technical challenge: take something messy and subjective, turn it into structured data, and see how far careful measurement could go without pretending the model had more certainty than it actually did. NullCS does not run live during matches; it relies on `.dem` files for post-game analysis. Therefore, by definition, it is not an "anti-cheat" in the traditional sense.
 
@@ -37,7 +37,7 @@ That made the project a useful technical challenge: take something messy and sub
 
 NullCS became my way of learning data science, machine learning, and deployment through a problem I actually cared about. Instead of working through only clean tutorial datasets, I wanted to deal with something that was unintuitive and noisy.
 
-The project also forced me to think beyond "does the model score high?" A useful review tool needs to be conservative and honest about uncertainty. It is not perfect and does not claim to detect every type of irregular gameplay. That shaped the way I approached the work. The goal became less about producing a dramatic detection number and more about building a system that can point to evidence, show its reasoning, and stay quiet when the signal is weak.
+The project also forced me to think beyond "does the model score high?" A useful review tool needs to be conservative and honest about uncertainty. It is not perfect and does not claim to identify every type of irregular gameplay. That shaped the way I approached the work. The goal became less about producing a dramatic score and more about building a system that can point to evidence, show its reasoning, and stay quiet when the signal is weak.
 
 ## What I Learned
 
@@ -45,7 +45,7 @@ The biggest lesson was that feature engineering and data quality matter more tha
 
 I also learned how fragile labels can be. A suspicious demo is not the same thing as a cleanly labeled player, and a missing or incorrect SteamID can change the meaning of an entire training row. That pushed the project toward grouped validation, conservative reporting, and review-oriented outputs instead of binary claims.
 
-Obviously technical skills were gained or built upon more, such as 1-D CNNs, gradient boosting models, feature engineering, weighting, thresholds etc. However, the most valuable skill I gained was research. Counter-Strike cheat documentation is fairly niche, definitions are unofficial with meanings changing between communities once you pass surface level terms. It required me to understand how Counter-Strike 2, as a video game, worked inside of the Source2 engine. Much time was spent understanding how viewangle logic behaves, the significance of the "user_cmd", or the fact that the eye height of the character is 64 units (which was crucial for building logic on what the player is looking at). I learned that it's not about knowing everything, but rather knowing where to look when you don't understand. This did include me joining "cheater communities" to witness what they talked about and how they avoid detection.
+Technical skills were gained or built upon, including 1-D CNNs, gradient boosting models, feature engineering, weighting, and threshold analysis. The most valuable skill I gained was research. Counter-Strike behavior terminology is niche, unofficial, and changes across communities. It required me to understand how Counter-Strike 2 works inside Source 2, including view-angle logic, the significance of user commands, and player eye height. I learned that it is not about knowing everything immediately, but knowing where to look when something does not make sense.
 
 
 ## Current Benchmark Read
@@ -76,9 +76,9 @@ These are review signals, not verdict thresholds. A higher score means "look her
 
 ![Benchmark slice comparison](assets/plots/benchmark_slice_signals.png)
 
-### Cheater Retrieval Summary
+### Suspicious Player Retrieval Summary
 
-![Cheater retrieval summary](assets/plots/cheater_retrieval_summary.png)
+![Suspicious player retrieval summary](assets/plots/cheater_retrieval_summary.png)
 
 ## Desktop Beta
 
@@ -92,13 +92,13 @@ NullCS is now centered around the desktop review app. The beta workflow is:
 
 The desktop app accepts `.dem` files only. It does not analyze videos, screenshots, scoreboard images, or live matches.
 
-The important interpretation rule is simple: a player landing in **Review** means the model sees signals that deserve follow-up. It does not automatically mean the player is cheating. Edge cases should be checked against the actual demo, round context, POV, teammate and opponent behavior, and ideally other matches from the same player.
+The important interpretation rule is simple: a player landing in **Review** means the model sees signals that deserve follow-up. It does not automatically settle the case. Edge cases should be checked against the actual demo, round context, POV, teammate and opponent behavior, and ideally other matches from the same player.
 
 The beta installer will be distributed through [GitHub Releases](https://github.com/gjones01/NullCS.ai/releases).
 
 ## Technical Docs
 
-- [Proof and benchmark story](proof.html)
+- [Benchmark story](proof.html)
 - [Model and pipeline overview](model.html)
 - [Project scope](scope.html)
 - [Full research snapshot](research_snapshot.html)

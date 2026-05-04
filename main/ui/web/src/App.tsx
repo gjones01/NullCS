@@ -1,4 +1,4 @@
-﻿import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { startTransition, useDeferredValue, useEffect, useMemo, useRef, useState, type DragEvent } from "react";
 import {
   type DemoStatus,
@@ -88,13 +88,17 @@ const safeMaybeNumber = (value: unknown) => {
 const validSteamId = (steamid: string) => /^\d{17}$/.test(steamid);
 const steamCommunityUrl = (steamid: string) => `https://steamcommunity.com/profiles/${encodeURIComponent(steamid)}`;
 const csStatsUrl = (steamid: string) => `https://csstats.gg/player/${encodeURIComponent(steamid)}`;
+const userErrorMessage = (err: unknown) => {
+  const raw = err instanceof Error ? err.message : String(err || "Unknown error");
+  return raw.replace(/^Error:\s*/i, "").trim() || "Something went wrong.";
+};
 const METRIC_INFO: Record<string, string> = {
   "Review Lane": "A neutral workflow label based on how unusual this player looks relative to others in the same match. It is not a cheating verdict.",
-  "Evidence Confidence": "How stable and well-supported the current behavior signal is. High confidence means the score has enough supporting evidence, not that the player is confirmed cheating.",
+  "Evidence Confidence": "How stable and well-supported the current behavior signal is. High confidence means the score has enough supporting evidence to review carefully, not that the case is settled.",
   "Lobby Rank": "Where the player sits relative to others in this specific match by behavioral deviation. Rank is match-relative only.",
   "Reaction Window": "Median visibility-to-shot timing across tracked kill events. Lower values can be unusual, but context matters.",
   "Shot Discipline": "Share of kills where the shot timing suggests prefire-like behavior before or immediately as visibility begins.",
-  "Accuracy Concentration": "Headshot share within the playerâ€™s tracked kill sample. Strong aim alone can be legitimate, especially for top players.",
+  "Accuracy Concentration": "Headshot share within the player's tracked kill sample. Strong aim alone can be legitimate, especially for top players.",
   "Occlusion Anomaly": "Share of smoke-occluded kills. Elevated values can merit context review, but are not decisive on their own.",
 };
 const DEFAULT_PRODUCT_IDENTITY = "Single-match behavioral review workspace";
@@ -115,7 +119,7 @@ const ABOUT_PILLARS = [
   },
   {
     title: "Built to stay understandable",
-    body: "The goal is not to produce a magic verdict. The goal is to surface useful signals, show supporting context, and help a human reviewer understand why a player was raised.",
+    body: "The goal is not to produce a final verdict. The goal is to surface useful signals, show supporting context, and help a human reviewer understand why a player was raised.",
   },
 ] as const;
 
@@ -355,7 +359,7 @@ const FEATURE_COPY: Record<string, { label: string; summary: string }> = {
   },
   headshot_rate: {
     label: "Headshot share",
-    summary: "How often tracked kills ended as headshots; useful context, not proof by itself.",
+    summary: "How often tracked kills ended as headshots; useful context, not decisive by itself.",
   },
   enc_acquire_shot_lag_p90: {
     label: "Slowest acquire-to-shot window",
@@ -1043,15 +1047,15 @@ function GuideOverlay({
               <div className="guide-bullet-list">
                 <span><strong>Typical</strong> means the player is within the expected range for the current match.</span>
                 <span><strong>Watch</strong> means the player is unusual enough to keep in view, but the signal is not suspicious by itself.</span>
-                <span><strong>Review</strong> means signals are starting to align with irregular play patterns and must be looked into with round context, POV, and supporting evidence.</span>
-                <span><strong>Strong</strong> means numerous signals align with cheating-like behavior and the case needs immediate attention.</span>
+                <span><strong>Review</strong> means signals are starting to align with irregular play patterns and should be checked with round context, POV, and supporting evidence.</span>
+                <span><strong>Strong</strong> means numerous signals are elevated at once and the case should be reviewed before lower-priority players.</span>
               </div>
             </section>
             <section className="guide-block">
               <h3>How to read values</h3>
               <p>Signal is review priority inside one match. Support is how much usable evidence the match contains for that player. Process metrics summarize aim, input, timing, visibility, and shot behavior.</p>
               <div className="guide-bullet-list">
-                <span>Higher signal means review sooner, not confirmed cheating.</span>
+                <span>Higher signal means review sooner, not that the case is settled.</span>
                 <span>Low support should make the read more cautious.</span>
                 <span>Colors mark benchmark severity, not a final verdict.</span>
               </div>
@@ -1059,7 +1063,7 @@ function GuideOverlay({
             <section className="guide-block">
               <h3>What it is not</h3>
               <div className="guide-bullet-list">
-                <span>It is not VAC, server-side enforcement, or a cheating accusation generator.</span>
+                <span>It is not VAC, server-side enforcement, or an accusation generator.</span>
                 <span>It does not replace watching the demo or checking external match context.</span>
                 <span>It should not be used to make account-level claims from one match.</span>
               </div>
@@ -1236,7 +1240,7 @@ function App() {
           if (cancelled) return;
           setDesktopStarting(false);
           setBackendAvailable(false);
-          setError(String(err));
+          setError(userErrorMessage(err));
           window.clearInterval(timer);
         }
       })();
@@ -1465,7 +1469,7 @@ function App() {
   const reportInterpretation = useMemo(() => interpretationOrFallback(selectedPlayer, report), [selectedPlayer, report]);
   const heroStats = useMemo(() => [
     { label: "Behavioral signals", value: `${featureCount}+`, note: "per-player indicators interpreted inside one match review" },
-    { label: "Detection lens", value: "Process + context", note: "timing, visibility, movement pressure, and encounter shape" },
+    { label: "Review lens", value: "Process + context", note: "timing, visibility, movement pressure, and encounter shape" },
     { label: "Analyst handoff", value: "Reports + traces", note: "fast reads, ranked rosters, and saved review artifacts" },
   ], [featureCount]);
 
@@ -1524,6 +1528,23 @@ function App() {
     setStatus({ demo_id: "", state: "queued", logs_tail: "", error: "" });
     setReportTab("overview");
     setQuery("");
+  }
+
+  function selectDemoFile(nextFile: File | null) {
+    if (!nextFile) return;
+    if (!nextFile.name.toLowerCase().endsWith(".dem")) {
+      setError("Only Counter-Strike .dem files are accepted. Videos, screenshots, ZIP files, and scoreboards cannot be analyzed.");
+      return;
+    }
+    const maxBytes = backendHealth?.max_upload_bytes;
+    if (maxBytes && nextFile.size > maxBytes) {
+      setError(`This demo is ${Math.round(nextFile.size / (1024 * 1024))} MB, above the ${Math.round(maxBytes / (1024 * 1024))} MB desktop beta limit.`);
+      return;
+    }
+    resetReviewForNewDemo();
+    setFile(nextFile);
+    setDesktopDemoPath("");
+    setError("");
   }
 
   async function refreshBackendReadiness() {
@@ -1605,7 +1626,7 @@ function App() {
       setError("The local review engine started, but the analysis API did not become upload-ready in time.");
       return false;
     } catch (err) {
-      setError(String(err));
+      setError(userErrorMessage(err));
       return false;
     } finally {
       setDesktopStarting(false);
@@ -1639,21 +1660,20 @@ function App() {
       if (!ready) return;
       demoInputRef.current?.click();
     } catch (err) {
-      setError(String(err));
+      setError(userErrorMessage(err));
     }
   }
 
   function handleDemoDrop(event: DragEvent<HTMLElement>) {
     event.preventDefault();
     setError("");
-    const dropped = Array.from(event.dataTransfer.files || []).find((item) => item.name.toLowerCase().endsWith(".dem"));
+    const files = Array.from(event.dataTransfer.files || []);
+    const dropped = files.find((item) => item.name.toLowerCase().endsWith(".dem"));
     if (!dropped) {
-      setError("Drop a .dem file to start a review.");
+      setError(files.length ? "Only Counter-Strike .dem files are accepted. Drop one demo file to start a review." : "Drop a .dem file to start a review.");
       return;
     }
-    resetReviewForNewDemo();
-    setFile(dropped);
-    setDesktopDemoPath("");
+    selectDemoFile(dropped);
   }
 
   async function connectLocalReviewEngine() {
@@ -1678,7 +1698,7 @@ function App() {
       }
       setBackendAvailable(false);
     } catch (err) {
-      setError(String(err));
+      setError(userErrorMessage(err));
       setBackendAvailable(false);
     } finally {
       if (serviceHealthy) {
@@ -1693,7 +1713,7 @@ function App() {
       setError("");
       applyReviewBundle(await openImportedReviewBundle(bundleFile));
     } catch (err) {
-      setError(String(err));
+      setError(userErrorMessage(err));
     }
   }
 
@@ -1730,7 +1750,7 @@ function App() {
       setStatus({ demo_id: nextDemoId, state: "queued", logs_tail: "", error: "", original_filename: originalFilename, stage_index: 0, stage: "Uploading", steps: PIPELINE_STEPS });
       setStage("processing");
     } catch (err) {
-      setError(String(err));
+      setError(userErrorMessage(err));
     }
   }
 
@@ -1751,7 +1771,7 @@ function App() {
       setEvidenceTables(Object.fromEntries(tables));
       setStage("report");
     } catch (err) {
-      setError(String(err));
+      setError(userErrorMessage(err));
     }
   }
 
@@ -1764,7 +1784,7 @@ function App() {
       }
       window.open(url, "_blank", "noopener,noreferrer");
     } catch (err) {
-      setError(String(err));
+      setError(userErrorMessage(err));
     }
   }
 
@@ -2064,7 +2084,7 @@ function App() {
                     </span>
                   </div>
                   <input className="field" placeholder="Optional case label" value={caseLabel} onChange={(e) => setCaseLabel(e.target.value)} disabled={!publicUploadAvailable && !activeBundle} />
-                  <input ref={demoInputRef} type="file" accept=".dem" className="hidden-file-input" onChange={(e) => { const nextFile = e.target.files?.[0] || null; if (nextFile) resetReviewForNewDemo(); setFile(nextFile); setDesktopDemoPath(""); }} />
+                  <input ref={demoInputRef} type="file" accept=".dem" className="hidden-file-input" onChange={(e) => selectDemoFile(e.target.files?.[0] || null)} />
                   <button
                     type="button"
                     className="upload-zone upload-zone-button tool-drop-zone"
@@ -2162,7 +2182,7 @@ function App() {
                 <article className="shell-card guide-panel">
                   <span className="eyebrow">Severity</span>
                   <h3>What Review means</h3>
-                  <p>A Review label means signals are starting to align with irregular play patterns and the player should be looked into more closely. It does not automatically mean the player is cheating.</p>
+                  <p>A Review label means signals are starting to align with irregular play patterns and the player should be looked into more closely. It does not automatically settle the case.</p>
                   <p>For edge cases, compare the report with the actual demo, round context, POV, teammate information, opponent behavior, and ideally other matches from the same player.</p>
                 </article>
                 <article className="shell-card guide-panel guide-panel-wide">
@@ -2215,6 +2235,12 @@ function App() {
                       </button>
                     );
                   })}
+                  {!filteredPlayers.length ? (
+                    <div className="empty-state">
+                      <span className="eyebrow">{players.length ? "No matching players" : "No roster loaded"}</span>
+                      <p>{players.length ? "Clear the search field or try a SteamID fragment." : "Load a .dem file from Intake or open the bundled sample to inspect a finished review."}</p>
+                    </div>
+                  ) : null}
                 </div>
               </aside>
               <div className="results-main">
@@ -2244,7 +2270,7 @@ function App() {
                       <strong>{activeBundle.meta.display_name}</strong>
                       {activeBundle.meta.summary ? ` ${activeBundle.meta.summary}` : ""}
                       {activeBundle.meta.benchmark_snapshot
-                        ? ` Benchmark snapshot: cheater top-1 ${(activeBundle.meta.benchmark_snapshot.cheater_top1_hit_rate ?? 0) * 100}% | top-3 ${(activeBundle.meta.benchmark_snapshot.cheater_top3_hit_rate ?? 0) * 100}% | held-out legit median top-1 ${num(activeBundle.meta.benchmark_snapshot.legit_median_top1_score ?? null, 4)}.`
+                        ? ` Benchmark snapshot: suspicious top-1 ${(activeBundle.meta.benchmark_snapshot.cheater_top1_hit_rate ?? 0) * 100}% | top-3 ${(activeBundle.meta.benchmark_snapshot.cheater_top3_hit_rate ?? 0) * 100}% | held-out legit median top-1 ${num(activeBundle.meta.benchmark_snapshot.legit_median_top1_score ?? null, 4)}.`
                         : ""}
                     </div>
                   ) : null}
@@ -2295,6 +2321,12 @@ function App() {
                         </article>
                       );
                     })}
+                    {!(report?.reasons || []).length ? (
+                      <div className="empty-state">
+                        <span className="eyebrow">No reason cards available</span>
+                        <p>The report opened, but this build did not return reason cards for the selected player. Use the overview read and rerun analysis if this looks unexpected.</p>
+                      </div>
+                    ) : null}
                   </div>
                 ) : null}
                 {reportTab === "trace" ? (
@@ -2341,3 +2373,4 @@ function App() {
   );
 }
 export default App;
+

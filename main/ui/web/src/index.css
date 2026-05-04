@@ -300,6 +300,15 @@ button:disabled { opacity: 0.42; cursor: not-allowed; }
 
 .leaderboard-panel { overflow: hidden; }
 .leaderboard-list { display: grid; gap: 12px; max-height: 920px; overflow: auto; padding-right: 6px; }
+.empty-state {
+  border: 1px dashed rgba(214, 224, 238, 0.18);
+  border-radius: 18px;
+  background: rgba(255,255,255,0.025);
+  padding: 18px;
+  color: var(--muted);
+  line-height: 1.65;
+}
+.empty-state p { margin: 8px 0 0; }
 .player-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 14px; align-items: center; text-align: left; padding: 16px 16px; min-width: 0; background: linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.025)); transition: transform 180ms ease, border-color 220ms ease, background 220ms ease, box-shadow 220ms ease; }
 .player-row:hover { transform: translateX(2px); border-color: rgba(224,230,255,0.24); }
 .player-row.active { border-color: rgba(225, 233, 255, 0.32); background: linear-gradient(135deg, rgba(121, 134, 255, 0.18), rgba(247, 152, 255, 0.08)); box-shadow: 0 18px 36px rgba(0,0,0,0.26); }
@@ -1470,6 +1479,47 @@ button:disabled { opacity: 0.42; cursor: not-allowed; }
   max-width: 58ch;
   color: #dce4ee;
   line-height: 1.75;
+}
+
+.processing-debug-card {
+  margin-top: 14px;
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: flex-start;
+  border: 1px solid rgba(214, 224, 238, 0.12);
+  border-radius: 18px;
+  background: rgba(255,255,255,0.025);
+  padding: 14px 16px;
+  color: #aeb8c8;
+  font-size: 12px;
+  line-height: 1.65;
+}
+
+.processing-debug-card p { margin: 6px 0 0; }
+
+.processing-debug-toggle {
+  flex: 0 0 auto;
+  border: 1px solid rgba(214, 224, 238, 0.16);
+  border-radius: 10px;
+  background: rgba(255,255,255,0.04);
+  color: #eef3fa;
+  padding: 8px 10px;
+  font-size: 12px;
+}
+
+.processing-log-output {
+  max-height: 180px;
+  overflow: auto;
+  margin: 12px 0 0;
+  padding: 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(214, 224, 238, 0.12);
+  background: rgba(0,0,0,0.28);
+  color: #c9d3df;
+  font-size: 11px;
+  line-height: 1.55;
+  white-space: pre-wrap;
 }
 
 .results-overview-panel {

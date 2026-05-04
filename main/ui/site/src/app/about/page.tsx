@@ -9,11 +9,11 @@ const sections = [
   },
   {
     title: "Why behavioral review matters",
-    body: "Some demo metrics can make blatant abuse look obvious, but that is not always enough to settle the case. The harder problem is when strong legitimate play and lower-visibility cheating begin to overlap.",
+    body: "Some demo metrics can make obvious abuse stand out, but that is not enough to settle every case. The harder problem is when strong legitimate play and lower-visibility irregular behavior begin to overlap.",
   },
   {
     title: "What the current models are for",
-    body: "The models are there to rank, organize, and explain suspicious behavior. They are useful when they surface the right players near the top of a lobby while staying quieter on strong legitimate and pro-level slices.",
+    body: "The models are there to rank, organize, and explain match-relative behavioral anomalies. They are useful when they surface the right players near the top of a lobby while staying quieter on strong legitimate and pro-level slices.",
   },
   {
     title: "What NullCS does not claim",
@@ -22,8 +22,8 @@ const sections = [
 ] as const;
 
 const currentFocus = [
-  "Blatant abuse can be loud in the metrics, but that is only one part of the review problem.",
-  "The harder cases are subtle aim assist, recoil assist, and information abuse that try to stay close to strong legitimate play.",
+  "Obvious abuse can be loud in the metrics, but that is only one part of the review problem.",
+  "The harder cases are subtle irregular patterns that try to stay close to strong legitimate play.",
   "NullCS is still under active research. The current state reflects real progress, not a claim that the problem has been solved.",
 ] as const;
 
@@ -85,10 +85,10 @@ export default function AboutPage() {
               the lobby, then look at the middle value across that group of demos.
             </p>
             <p className="mt-4 text-sm leading-7 text-zinc-400">
-              So a suspicious median of <span className="text-zinc-200">0.748</span> versus{" "}
-              <span className="text-zinc-200">0.0073</span> on held-out normal legit demos means the suspicious slice is
+              So a suspicious median of <span className="text-zinc-200">0.030</span> versus{" "}
+              <span className="text-zinc-200">0.0031</span> on held-out normal legit demos means the suspicious slice is
               surfacing much more strongly, while the legit slice stays almost pinned near zero. The pro value staying at{" "}
-              <span className="text-zinc-200">0.0073</span> matters for the same reason: strong legitimate players are not
+              <span className="text-zinc-200">0.0034</span> matters for the same reason: strong legitimate players are not
               being inflated just because they are skilled.
             </p>
           </article>
@@ -100,7 +100,7 @@ export default function AboutPage() {
               slices were high, the system would be noisy. If all three were low, it would not be useful.
             </p>
             <p className="mt-4 text-sm leading-7 text-zinc-400">
-              The <span className="text-zinc-200">0.90</span> top-3 retrieval number answers a different question: how often
+              The <span className="text-zinc-200">0.875</span> top-3 retrieval number answers a different question: how often
               does a labeled suspicious player appear somewhere in the top three ranked players for a suspicious benchmark
               demo? That matters because NullCS is framed as triage and review support. The goal is to reliably surface the
               right players near the top of the lobby, not to claim that one score is a final verdict.
@@ -128,19 +128,19 @@ export default function AboutPage() {
             <p className="mt-5 max-w-2xl text-sm leading-7 text-zinc-300">
               NullCS is being built by Gerry Jones, Jr., who holds a B.S. in Applied Mathematics and is currently pursuing a
               master's degree in Data Science. The project started after returning to Counter-Strike in April 2025 and
-              repeatedly running into blatant abuse, including aimbotting, triggerbotting, and spinbotting, with the obvious
-              question of why some of those cases appeared to move through the ecosystem without meaningful response.
+              repeatedly running into obvious abuse, with the practical question of whether post-match demo data could
+              support a more structured review workflow.
             </p>
             <p className="mt-4 max-w-2xl text-sm leading-7 text-zinc-300">
               That turned into a research problem rather than a complaint. The goal was not to build an anticheat or market a
-              magical detector. The goal was to investigate whether suspicious behavior in demos could be surfaced more
-              systematically, including both the obvious cases and the harder ones: aim assist, recoil assist, and information
-              abuse that often try to stay just subtle enough to blend into strong legitimate play.
+              universal detector. The goal was to investigate whether suspicious behavior in demos could be surfaced more
+              systematically, including both obvious cases and harder review cases where abnormal behavior can sit close to
+              strong legitimate play.
             </p>
             <p className="mt-4 max-w-2xl text-sm leading-7 text-zinc-300">
               Building that required repeated iteration: sourcing demo data, manually pulling and labeling SteamIDs for
-              training, testing different feature and modeling strategies, and spending time inside cheat communities to better
-              understand how players discuss avoiding bans and staying below the threshold of current systems such as VAC.
+              training, testing different feature and modeling strategies, and studying public discussion around evasion,
+              review thresholds, and common claims about how current systems behave.
               There is still substantial work ahead, but the current state of NullCS already reflects meaningful progress.
             </p>
           </article>

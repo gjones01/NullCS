@@ -1,8 +1,8 @@
 ---
-title: Proof
+title: Benchmarks
 ---
 
-# Proof
+# Benchmarks
 
 This page is the short public-safe benchmark story for NullCS.
 
@@ -33,9 +33,9 @@ That shape is more useful than a louder model that also overreacts to strong leg
 
 ![Benchmark slice comparison](assets/plots/benchmark_slice_signals.png)
 
-### Cheater retrieval summary
+### Suspicious player retrieval summary
 
-![Cheater retrieval summary](assets/plots/cheater_retrieval_summary.png)
+![Suspicious player retrieval summary](assets/plots/cheater_retrieval_summary.png)
 
 ### Top-1 distribution
 
