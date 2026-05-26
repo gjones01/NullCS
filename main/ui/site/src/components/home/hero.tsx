@@ -19,14 +19,14 @@ export function Hero() {
           </Reveal>
           <Reveal delay={0.06}>
             <h1 className="mt-7 max-w-4xl font-display text-4xl tracking-[-0.065em] text-white sm:text-6xl lg:text-7xl">
-              NullCS is an applied machine learning research project for Counter-Strike demo telemetry.
+              Review CS2 demos with machine learning signals that stay explainable.
             </h1>
           </Reveal>
           <Reveal delay={0.12}>
             <p className="mt-6 max-w-2xl text-lg leading-8 text-zinc-400 sm:text-xl">
-              The project studies whether Counter-Strike 2 <span className="text-zinc-200">.dem</span> files can be turned
-              into structured behavioral signals for analyst triage. It ranks match-relative anomalies for review and keeps
-              the output bounded: not an anti-cheat, not a ban system, and not an automated verdict engine.
+              NullCS parses Counter-Strike 2 <span className="text-zinc-200">.dem</span> files, builds behavioral features,
+              and ranks review-worthy anomalies with evidence attached. It is research tooling for analyst triage, not an
+              automated ban or verdict system.
             </p>
           </Reveal>
           <Reveal delay={0.18}>
@@ -74,10 +74,10 @@ export function Hero() {
               <div className="absolute bottom-0 left-0 right-0 p-6 sm:p-8">
                 <div className="rounded-[1.75rem] border border-white/10 bg-black/35 p-5 backdrop-blur-[2px] transition-transform duration-500 hover:-translate-y-1">
                   <div className="text-[0.7rem] uppercase tracking-[0.24em] text-zinc-400">Current direction</div>
-                  <div className="mt-3 font-display text-2xl tracking-[-0.05em] text-white">Research tooling for review-worthy behavior, with uncertainty kept visible</div>
+                  <div className="mt-3 font-display text-2xl tracking-[-0.05em] text-white">Parse the match, rank the standouts, inspect the evidence</div>
                   <p className="mt-3 max-w-md text-sm leading-6 text-zinc-300">
-                    The hard problem is not producing a dramatic score. It is separating suspicious benchmark slices from
-                    strong legitimate and pro play without pretending a single match-relative signal settles the case.
+                    The hard problem is keeping suspicious benchmark slices visible while strong legitimate and pro play
+                    stay quiet enough for the output to remain useful.
                   </p>
                   <Link href="/about" className="mt-5 inline-flex items-center gap-2 text-sm text-white transition-opacity hover:opacity-80">
                     Read the project background

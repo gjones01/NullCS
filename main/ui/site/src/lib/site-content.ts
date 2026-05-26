@@ -16,16 +16,15 @@ export const githubUrl =
 
 export const navItems = [
   { href: "/", label: "Overview" },
-  { href: "/#capabilities", label: "Capabilities" },
+  { href: "/#pipeline", label: "Pipeline" },
   { href: "/#proof", label: "Benchmarks" },
-  { href: "/#workflow", label: "Workflow" },
   { href: "/about", label: "About" },
 ] as const;
 
 export const heroMetrics = [
-  { label: "Research Corpus", value: "894 labeled matches spanning suspicious, normal legit, and pro stress-test slices" },
-  { label: "Encounter Scale", value: "281,792 encounter rows feed the temporal and player-level modeling stack" },
-  { label: "Output Framing", value: "Ranked review signals and supporting context, not automated verdicts or ban decisions" },
+  { label: "Input", value: "CS2 demo files parsed into event and encounter data" },
+  { label: "Modeling", value: "281,792 encounter rows feed temporal and player-level signals" },
+  { label: "Output", value: "Ranked review signals with reasons, not verdicts" },
 ] as const;
 
 export const benchmarkStats = [
@@ -76,6 +75,42 @@ export const capabilityBands = [
   },
 ] as const;
 
+export const pipelineSteps = [
+  {
+    label: "Step 01",
+    title: "Structure the demo",
+    body: "Raw .dem files become event, engagement, and encounter data that can be compared across matches.",
+    icon: Binary,
+  },
+  {
+    label: "Step 02",
+    title: "Measure behavior",
+    body: "Timing, visibility, aim process, mouse movement, and control-path features are built around each engagement.",
+    icon: Activity,
+  },
+  {
+    label: "Step 03",
+    title: "Rank for review",
+    body: "The model surfaces players and moments that stand out inside the match, then exports evidence for inspection.",
+    icon: ChartColumnBig,
+  },
+] as const;
+
+export const reviewPrinciples = [
+  {
+    title: "Not A Verdict",
+    body: "Scores are review signals, not enforcement decisions.",
+  },
+  {
+    title: "Hard Cases",
+    body: "The system is designed around subtle behavior, not only obvious clips.",
+  },
+  {
+    title: "Quiet Baselines",
+    body: "Legit and pro slices are tracked so the model does not become noisy.",
+  },
+] as const;
+
 export const workflowSteps = [
   {
     step: "01",
@@ -98,9 +133,9 @@ export const workflowSteps = [
 ] as const;
 
 export const credibilityNotes = [
-  "Some demo metrics can look unusual, but that does not automatically settle the case on its own.",
-  "The real pressure test is whether suspicious slices rise without inflating strong legitimate and pro-level play at the same time.",
-  "Research is still ongoing. The current result is serious progress, not a claim that the problem is solved.",
+  "Public benchmark plots show where suspicious slices separate from legit and pro baselines.",
+  "Explainability artifacts keep the review focused on what raised the signal.",
+  "Research is ongoing, so the site presents evidence and limits instead of a solved-problem claim.",
 ] as const;
 
 export const aboutPrinciples = [
