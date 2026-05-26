@@ -1,0 +1,113 @@
+# Large/raw/demo data
+huggfacedata/
+huggingfacedata/
+*.dem
+*.parquet
+raw_zips/
+parsed_zips/
+processed/
+raw_parsed/
+outputs/
+datasets/
+CheaterDemos/
+LegitDemos/
+Demos/
+NewAnubisTri/
+Plots/
+Post 100 Scripts New/
+Tick Level/
+cheat_training/
+legit_baseline_outputs/
+tris/
+*.zip
+*.png
+!docs/assets/
+!docs/assets/**
+!docs/assets/plots/
+!docs/assets/plots/*.png
+!main/ui/web/public/
+!main/ui/web/public/*.png
+
+# Processed artifacts and reports
+main/data/**
+main/data/processed/**
+!main/data/processed/.gitkeep
+main/data/raw_uploads/**
+main/data/processed/reports/**
+main/data/processed/demos/**
+main/data/processed/models/**
+
+# Evidence/report exports
+**/evidence_*.csv
+**/ranked_*_suspicion*.csv
+**/*_infer.parquet
+**/*_infer.csv
+
+# Model artifacts
+*.joblib
+*.pkl
+*.onnx
+*.bin
+*.pt
+*.jsonl
+
+# Secrets and env
+.env
+.env.local
+.env.*
+!.env.example
+!main/ui/web/.env.example
+*.key
+*.pem
+*.token
+
+# Python/Node local state
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.venv/
+venv/
+node_modules/
+main/ui/web/dist/
+main/ui/web/.vite/
+main/ui/web/*.log
+*.log
+logs/
+**/logs/
+main/ui/web/tsconfig.tsbuildinfo
+main/ui/api/state/*.json
+main/ui/api/state/
+
+# UI demo artifacts
+main/data/raw_uploads/
+main/ui/web/.env.local
+NOTES_STATUS.md
+REPO_MAP.md
+
+# Public repo exclusions: private docs, desktop app, and generated promo assets
+main/ui/**
+!main/ui/site/
+!main/ui/site/**
+!main/ui/api/
+!main/ui/api/**
+!main/ui/web/
+!main/ui/web/**
+main/ui/api/state/
+main/ui/api/**/__pycache__/
+main/ui/web/node_modules/
+main/ui/web/dist/
+main/ui/web/.vite/
+main/ui/web/tsconfig.tsbuildinfo
+main/ui/web/src-tauri/target/
+main/ui/web/src-tauri/gen/schemas/
+main/ui/web/src-tauri/resources/nullcs-backend/
+docs/*handoff*.md
+docs/desktop_alpha_plan.md
+docs/dev_setup.md
+docs/OWNERSHIP_MAP.md
+docs/personal_pipeline_guide.md
+docs/training_log.md
+docs/assets/linkedin/**
+docs/assets/trailer/**
+docs/assets/trailer_real/**

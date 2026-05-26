@@ -1,0 +1,12 @@
+title: NullCS
+description: Behavioral review research for Counter-Strike demos
+theme: minima
+markdown: kramdown
+header_pages:
+  - index.md
+  - methodology.md
+  - feature_engineering.md
+  - encounter_model.md
+  - model.md
+  - evaluation.md
+  - limitations.md

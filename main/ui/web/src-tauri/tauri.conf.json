@@ -1,0 +1,43 @@
+{
+  "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
+  "productName": "NullCS",
+  "version": "0.1.0-alpha.2",
+  "identifier": "app.nullcs.desktop",
+  "build": {
+    "frontendDist": "../dist",
+    "devUrl": "http://127.0.0.1:5173",
+    "beforeDevCommand": "npm.cmd run dev -- --host 127.0.0.1 --port 5173",
+    "beforeBuildCommand": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/prepare-desktop-backend.ps1 && npm.cmd run build"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "NullCS",
+        "width": 1600,
+        "height": 980,
+        "minWidth": 1280,
+        "minHeight": 820,
+        "resizable": true,
+        "maximized": true,
+        "fullscreen": false
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; connect-src 'self' ipc: http://ipc.localhost http://127.0.0.1:8011 http://127.0.0.1:8012 http://127.0.0.1:8013 http://127.0.0.1:8014 http://127.0.0.1:8015 http://127.0.0.1:8016 http://127.0.0.1:8017 http://127.0.0.1:8018 http://127.0.0.1:8019 http://127.0.0.1:8020 http://127.0.0.1:8021 http://127.0.0.1:8022 http://127.0.0.1:8023 http://127.0.0.1:8024 http://127.0.0.1:8025 http://127.0.0.1:8026 http://127.0.0.1:8027 http://127.0.0.1:8028 http://127.0.0.1:8029 http://127.0.0.1:8030 http://127.0.0.1:8031 http://127.0.0.1:8032 http://127.0.0.1:8033 http://127.0.0.1:8034 http://127.0.0.1:8035 http://127.0.0.1:8036 http://127.0.0.1:8037 http://127.0.0.1:8038 http://127.0.0.1:8039 http://127.0.0.1:8040 http://127.0.0.1:8041 http://127.0.0.1:8042; img-src 'self' asset: data: blob:; media-src 'self' asset: data: blob:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; script-src 'self'; worker-src 'self' blob:; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self';"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "nsis",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "resources": [
+      "resources/nullcs-backend"
+    ]
+  }
+}
