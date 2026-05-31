@@ -2,7 +2,7 @@ import Image from "next/image";
 import { SectionShell } from "@/components/layout/section-shell";
 import { HoverPanel } from "@/components/ui/hover-panel";
 import { Reveal } from "@/components/ui/reveal";
-import { pipelineSteps, reviewPrinciples } from "@/lib/site-content";
+import { actualFindings, pipelineSteps } from "@/lib/site-content";
 
 export function ReviewPipeline() {
   return (
@@ -10,7 +10,7 @@ export function ReviewPipeline() {
       id="pipeline"
       eyebrow="Review Pipeline"
       title="From demo file to review queue."
-      description="NullCS turns CS2 demos into structured behavior evidence, then ranks the moments and players that deserve closer inspection."
+      description="NullCS turns CS2 demos into structured behavior evidence, then ranks the players and moments that deserve closer inspection."
     >
       <div className="grid gap-5 lg:grid-cols-[0.95fr_1.05fr]">
         <Reveal>
@@ -25,10 +25,10 @@ export function ReviewPipeline() {
             <div className="absolute inset-x-0 bottom-0 p-6">
               <div className="text-[0.7rem] uppercase tracking-[0.22em] text-zinc-500">Output</div>
               <h3 className="mt-3 max-w-md font-display text-3xl tracking-[-0.05em] text-white">
-                Ranked review signals with context attached.
+                Ranked signals, evidence rows, and failure-aware scores.
               </h3>
               <p className="mt-3 max-w-lg text-sm leading-6 text-zinc-300">
-                The product is not a verdict. It is a queue of review-worthy behavior with supporting evidence.
+                A high score means inspect this player first. It does not mean the match is settled.
               </p>
             </div>
           </div>
@@ -55,13 +55,22 @@ export function ReviewPipeline() {
       </div>
 
       <Reveal delay={0.14}>
-        <div className="mt-6 grid gap-4 md:grid-cols-3">
-          {reviewPrinciples.map((principle) => (
-            <div key={principle.title} className="rounded-[1.35rem] border border-white/10 bg-[#0a0d14] p-5">
-              <div className="text-[0.7rem] uppercase tracking-[0.22em] text-zinc-500">{principle.title}</div>
-              <p className="mt-3 text-sm leading-6 text-zinc-300">{principle.body}</p>
-            </div>
-          ))}
+        <div className="mt-10">
+          <div className="max-w-3xl">
+            <div className="text-[0.7rem] uppercase tracking-[0.22em] text-zinc-500">What It Actually Finds</div>
+            <h3 className="mt-3 font-display text-3xl tracking-[-0.05em] text-white">Concrete signals from the demo telemetry.</h3>
+          </div>
+          <div className="mt-6 grid gap-4 md:grid-cols-3">
+            {actualFindings.map((finding) => (
+              <div key={finding.title} className="rounded-[1.35rem] border border-white/10 bg-[#0a0d14] p-5">
+                <div className="text-[0.7rem] uppercase tracking-[0.22em] text-zinc-500">{finding.title}</div>
+                <p className="mt-3 text-sm leading-6 text-zinc-300">{finding.body}</p>
+              </div>
+            ))}
+          </div>
+          <p className="mt-5 max-w-3xl text-sm leading-6 text-zinc-500">
+            These are review signals. They point to behavior worth inspecting; they do not identify a cheat type by themselves.
+          </p>
         </div>
       </Reveal>
     </SectionShell>

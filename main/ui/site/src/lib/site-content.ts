@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 
 export const githubUrl =
-  process.env.NEXT_PUBLIC_GITHUB_URL || "https://github.com/gjones01/NullCS.ai";
+  process.env.NEXT_PUBLIC_GITHUB_URL || "https://github.com/gjones01/NullCS";
 
 export const navItems = [
   { href: "/", label: "Overview" },
@@ -22,16 +22,16 @@ export const navItems = [
 ] as const;
 
 export const heroMetrics = [
-  { label: "Input", value: "CS2 demo files parsed into event and encounter data" },
-  { label: "Modeling", value: "281,792 encounter rows feed temporal and player-level signals" },
-  { label: "Output", value: "Ranked review signals with reasons, not verdicts" },
+  { label: "Dataset", value: "894 demos and 281,792 encounter windows in the current public benchmark" },
+  { label: "Features", value: "35 temporal CNN channels plus 449 player-demo ranking features" },
+  { label: "Output", value: "Ranked review signals with reasons, not verdicts or ban decisions" },
 ] as const;
 
 export const benchmarkStats = [
-  { label: "Suspicious median top-ranked signal", value: "0.030" },
-  { label: "Normal legit median top-ranked signal", value: "0.0031" },
-  { label: "Pro stress-test median top-ranked signal", value: "0.0034" },
-  { label: "Suspicious top-3 retrieval", value: "0.875" },
+  { label: "Player-level ROC-AUC", value: "0.956" },
+  { label: "Player-level PR-AUC", value: "0.796" },
+  { label: "Suspicious player top-1", value: "92.8%" },
+  { label: "Suspicious player top-3", value: "97.3%" },
 ] as const;
 
 export const featureCards = [
@@ -78,36 +78,36 @@ export const capabilityBands = [
 export const pipelineSteps = [
   {
     label: "Step 01",
-    title: "Structure the demo",
-    body: "Raw .dem files become event, engagement, and encounter data that can be compared across matches.",
+    title: "Parse tick-level telemetry",
+    body: "Raw .dem files become event tables, player state, visibility markers, shots, damage, kills, and round context.",
     icon: Binary,
   },
   {
     label: "Step 02",
-    title: "Measure behavior",
-    body: "Timing, visibility, aim process, mouse movement, and control-path features are built around each engagement.",
+    title: "Build encounter windows",
+    body: "Each engagement is represented as a 32-tick temporal sequence with aim, mouse, visibility, movement, shot, and damage channels.",
     icon: Activity,
   },
   {
     label: "Step 03",
-    title: "Rank for review",
-    body: "The model surfaces players and moments that stand out inside the match, then exports evidence for inspection.",
+    title: "Rank players for review",
+    body: "CNN encounter scores and 449 player-demo features feed a grouped XGBoost model that ranks players inside the match.",
     icon: ChartColumnBig,
   },
 ] as const;
 
-export const reviewPrinciples = [
+export const actualFindings = [
   {
-    title: "Not A Verdict",
-    body: "Scores are review signals, not enforcement decisions.",
+    title: "Aim Correction",
+    body: "Positive rows show cleaner pre-shot stabilization in several aim-process summaries, including lower pre-shot aim-error variance.",
   },
   {
-    title: "Hard Cases",
-    body: "The system is designed around subtle behavior, not only obvious clips.",
+    title: "Visibility Timing",
+    body: "Prefire-like rifle timing and long-range fast-reaction rates separate a subset of suspicious rows from the negative baseline.",
   },
   {
-    title: "Quiet Baselines",
-    body: "Legit and pro slices are tracked so the model does not become noisy.",
+    title: "Encounter Clusters",
+    body: "51.5% of positive encounter windows score at or above 0.75, compared with 3.6% of negative windows.",
   },
 ] as const;
 
@@ -133,9 +133,9 @@ export const workflowSteps = [
 ] as const;
 
 export const credibilityNotes = [
-  "Public benchmark plots show where suspicious slices separate from legit and pro baselines.",
-  "Explainability artifacts keep the review focused on what raised the signal.",
-  "Research is ongoing, so the site presents evidence and limits instead of a solved-problem claim.",
+  "Grouped evaluation uses demo_id splits so one match does not leak across train and validation folds.",
+  "The model still produces false positives, especially in headshot-heavy high-support matches.",
+  "Scores are review priority, not enforcement probability.",
 ] as const;
 
 export const aboutPrinciples = [
@@ -161,7 +161,7 @@ export const footerLinks = [
 export const siteMetadata = {
   title: "NullCS",
   description:
-    "Behavioral review research for Counter-Strike 2 demos, built around structured analysis, explainable signals, and ML-driven triage.",
+    "Behavioral anomaly research for Counter-Strike 2 demos, built around tick-level telemetry, encounter windows, and ranked review signals.",
 };
 
 export const screenshotSlots = [
@@ -182,41 +182,41 @@ export const screenshotSlots = [
 export const proofCards = [
   {
     eyebrow: "Benchmark slices",
-    title: "Top-ranked demo signal separates suspicious slices from legit and pro holdouts",
-    body: "The strongest player signal in suspicious demos shifts upward, while held-out legit and pro slices stay compressed near zero. That is the core credibility test: separation without broad false-positive drift.",
+    title: "Grouped player-level evaluation reaches ROC-AUC 0.956 and PR-AUC 0.796",
+    body: "The current CS2CD player-level readout covers 860 demos after filtering, with 992 positive and 5,894 negative player-demo rows.",
     image: "/assets/proof-pack/benchmark_top1_distribution.png",
   },
   {
     eyebrow: "Per-demo surface",
-    title: "Top-1 and top-3 demo aggregates separate suspicious lobbies from quiet baselines",
-    body: "Suspicious demos move up and to the right, while legit and pro demos stay near the origin. That matters because the signal is not just one loud outlier; the top of the lobby is coherently louder.",
+    title: "The labeled suspicious player ranks top-1 in 92.8% of suspicious demos",
+    body: "Top-3 retrieval is 97.3% across 293 demos with a suspicious player label, which is the core review-triage metric.",
     image: "/assets/proof-pack/benchmark_top1_vs_top3_scatter.png",
   },
   {
     eyebrow: "Control path",
-    title: "Usercmd-derived mouse and crosshair behavior diverge across suspicious, normal, and pro benchmark slices",
-    body: "These panels come from mouse-delta and crosshair-process aggregates built out of encounter windows. They show why control-path telemetry matters: suspicious slices are not just louder in score space, they behave differently in input and aim process too.",
+    title: "Encounter-model scores separate positive windows from negative windows",
+    body: "Median CNN score is 0.769 for positive windows and 0.188 for negative windows. The model is seeing repeatable encounter-level structure.",
     image: "/assets/proof-pack/control_path_bucket_boxplots.png",
   },
   {
     eyebrow: "Control features",
-    title: "Input-stability, mouse-delta, and angular-jerk features carry real separating power on their own",
-    body: "This is not a one-metric story. Usercmd-derived mouse behavior, quiet-after-acquire behavior, and angular-jerk features all show measurable lift by themselves before they are folded into the full ranking model.",
+    title: "Fast rifle timing, prefire-like rates, and headshot concentration are visible but insufficient alone",
+    body: "Feature separation is strongest when timing, aim process, input stability, visibility, and encounter-model summaries are combined.",
     image: "/assets/proof-pack/control_path_feature_auc.png",
   },
   {
     eyebrow: "Training scale",
-    title: "The current stack is trained on roughly one thousand matches, which expands into hundreds of thousands of modeled encounters",
-    body: "The data scale matters because a single CS2 match is not one row. It becomes many encounter windows, control-path sequences, player aggregates, and benchmark slices. That is what allows the model to study hard cases instead of just memorizing clips.",
+    title: "A single match expands into many encounter windows and player-level aggregates",
+    body: "The benchmark contains 281,792 encounter windows and 6,886 evaluated player-demo rows after filtering.",
     image: "/assets/proof-pack/training_data_scale.png",
   },
 ] as const;
 
 export const proofExample = {
   eyebrow: "Granular example",
-  title: "Control-path features help inspect whether a player is efficient in a way that deserves review, not just loud.",
-  body: "This benchmark example is built from encounter-level mouse and crosshair-process aggregates. Normal players tend to be coarser and noisier, pros tend to be more efficient, and suspicious slices can start looking efficient in a different way: less corrective burst, less manual oversteer, and cleaner settling than expected for the difficulty of the encounter. That is the kind of control-path evidence NullCS is trying to surface.",
+  title: "Some signals are lower-noise process measurements, not dramatic snaps.",
+  body: "Positive rows show lower medians on several stabilization features, including pre-shot aim-error variance and early snap-jerk summaries. That does not prove a cheat type. It tells a reviewer where the engagement process looks unusually clean for the surrounding context.",
   caption:
-    "The key point is not that one bar settles a case. It is that NullCS can inspect the process behind the aim, not just the outcome.",
+    "The useful output is an inspectable reason to review the demo, not a final label.",
   image: "/assets/proof-pack/top1_control_band_comparison.png",
 } as const;

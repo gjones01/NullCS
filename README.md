@@ -1,150 +1,91 @@
 # NullCS
 
-NullCS is an applied machine learning research project for behavioral review of Counter-Strike demo data.
+NullCS is a Counter-Strike 2 demo research project for behavioral anomaly detection.
 
-The project studies whether structured match telemetry can surface review-worthy behavioral anomalies without pretending that a model can produce an enforcement decision. It is not an anti-cheat, not a ban system, and not a verdict engine. The intended framing is analyst triage: rank players and situations that deserve closer inspection, explain what raised the signal, and remain explicit about uncertainty.
+It is **not** an anti-cheat, **not** a ban system, and **not** an automated verdict engine. The system turns post-match demo telemetry into ranked review signals: which players and engagements deserve closer inspection, and which measurements caused the model to raise them.
 
-Counter-Strike demos are a useful research environment because they contain dense, time-aligned behavioral traces: player state, view angles, input-derived movement, visibility timing, shots, damage, kills, weapon context, and round structure. That makes the problem more interesting than scoreboard classification. The question is not simply whether a player had a high headshot rate. The question is whether the process leading into engagements looks unusual after accounting for match context, visibility, movement, timing, and difficulty.
+The current public benchmark uses 894 parsed demos and 281,792 encounter windows. After player-demo filtering, the grouped evaluation set contains 860 demos, 6,886 player-demo rows, 992 positive rows, and 5,894 negative rows.
 
-## Research Question
+## What Problem This Studies
 
-The central research question is:
+Scoreboard statistics are too coarse for the cases NullCS is meant to study. A high headshot rate or a short reaction time can be meaningful, but those numbers are also affected by skill, weapon choice, angle advantage, map position, visibility, and round context.
 
-> Can post-match demo telemetry be transformed into reliable review-priority signals that surface unusual behavioral patterns while staying quiet on legitimate high-skill play?
+NullCS asks a narrower question:
 
-That framing matters. A useful system must do more than score suspicious examples highly. It also has to avoid inflating strong legitimate players, high-ELO players, and pro-style stress-test slices. False positives in those groups are especially damaging because they make the output easy to dismiss and reduce trust in any signal the model produces.
+> Can tick-level demo telemetry surface unusual behavior for review while staying comparatively quiet on legitimate high-skill play?
 
-## What The System Does
+The output is a triage surface. A high score means "look here first." It does not mean "this account cheated."
 
-At a high level, NullCS turns one `.dem` file into match-relative review outputs:
-
-1. Parse raw demo data into structured events and tick-level telemetry.
-2. Extract engagement windows around player encounters.
-3. Derive temporal and contextual behavior features.
-4. Run encounter-level temporal modeling over synchronized per-tick channels.
-5. Aggregate encounter outputs and engineered features to player-demo rows.
-6. Use a final ranking model to order players by review priority inside the match.
-7. Export reasons, evidence tables, and benchmark context for manual inspection.
-
-The result is a review queue, not a conclusion. A higher signal means "look here sooner." It does not replace watching the demo, checking round context, or comparing behavior across additional matches.
-
-## What This Project Does Not Claim
-
-NullCS does not claim to:
-
-- identify a specific cheat category such as walling or aim assistance
-- determine that an account cheated from a single match
-- operate as a live anti-cheat
-- support bans or enforcement decisions
-- produce a universal probability of cheating
-- replace human review of the demo
-
-The project uses suspicious labels and benchmark slices for model development, but public outputs should be read as behavioral triage signals and research artifacts.
-
-## Architecture Overview
-
-The current stack is intentionally layered:
+## Pipeline
 
 ```text
-CS demo
-  -> parser outputs
-  -> event/tick tables
-  -> engagement windows
-  -> temporal encounter channels
-  -> encounter-level neural model
-  -> player-level aggregation
-  -> gradient-boosted ranking model
-  -> analyst-facing review outputs
+CS2 .dem file
+  -> tick-level parse tables
+  -> encounter windows around engagements
+  -> 35-channel temporal encounter representation
+  -> temporal CNN encounter scoring
+  -> ~450 player-demo features
+  -> grouped XGBoost ranking model
+  -> ranked players, evidence rows, and reasons for review
 ```
 
-The encounter model is meant to capture short-window behavioral process: how a player moves, aims, reacts, corrects, fires, and transitions through visibility or damage events. The player-level model then combines those encounter summaries with broader match features such as timing distributions, low-visibility outcomes, weapon mix, headshot share, distance, round spread, and support counts.
+The model stack is intentionally split:
 
-Detailed documentation:
+- A temporal CNN reads fixed-length encounter windows with synchronized channels such as aim error, mouse delta, command/view gaps, visibility transitions, movement state, shot timing, and damage timing.
+- Player-demo aggregation converts encounter outputs and engineered telemetry into 449 features.
+- A gradient-boosted player-level model ranks players inside each demo.
 
-- [Methodology](docs/methodology.md)
-- [Feature Engineering](docs/feature_engineering.md)
-- [Encounter Neural Model](docs/encounter_model.md)
-- [Model Stack](docs/model_stack.md)
-- [Evaluation Philosophy](docs/evaluation.md)
-- [Limitations](docs/limitations.md)
-- [Research Snapshot](docs/research_snapshot.md)
+## Feature Families
 
-## Feature Engineering Focus
+NullCS computes signals around the process leading into an engagement, not just the result.
 
-NullCS is built around behavioral feature design rather than one headline metric. Major feature families include:
+- **Aim process:** aim error, aim collapse, angular velocity, angular jerk, crosshair correction, pre-shot stability.
+- **Visibility and timing:** first visible tick, visibility transitions, time to first shot, time to damage, prefire-like windows.
+- **Input and control path:** mouse delta magnitude, command yaw/pitch deltas, view-command gaps, post-acquire quietness, input burst behavior.
+- **Movement and difficulty:** attacker/victim speed, walking, airborne state, scoped/flashed state, distance, closing speed, relative speed.
+- **Outcome context:** kills, damage, headshot rate, through-smoke events, weapon mix, victim spread, round distribution.
 
-- aim process and view-angle deltas
-- target acquisition timing
-- angular velocity, angular jerk, and snap-like movement
-- mouse movement and usercmd-derived control-path signals
-- recoil correction and post-shot settling
-- movement state, walking, airborne state, scoped state, and flashed context
-- visibility-to-shot timing and first-contact windows
-- low-visibility precision and occlusion outcomes
-- difficulty-conditioned precision
-- engagement distance, weapon context, and round context
-- temporal spacing such as ticks since previous action and ticks to next action
-- collapse rate and collapse ratio around aim convergence
-- input burst and input stability
+## Current Results
 
-The goal is to describe the process around engagements, not just the result.
+Grouped out-of-fold evaluation is done by `demo_id`, so rows from the same match do not appear in both train and validation folds.
 
-## Encounter-Level Neural Modeling
+| Metric | Current CS2CD player-level result |
+| --- | ---: |
+| Evaluated demos after player-count filter | 860 |
+| Evaluated player-demo rows | 6,886 |
+| Positive / negative rows | 992 / 5,894 |
+| ROC-AUC | 0.956 |
+| PR-AUC | 0.796 |
+| Confirmed suspicious player ranked top-1 | 92.8% |
+| Confirmed suspicious player ranked top-3 | 97.3% |
 
-The encounter-level model consumes temporal windows represented as synchronized channels over time. A channel is one per-tick stream: for example mouse movement, view-angle delta, aim error, visibility state, movement state, firing state, damage timing, or difficulty context.
+These are review-ranking metrics, not enforcement metrics. See [RESULTS.md](RESULTS.md) for the detailed readout, behavioral observations, and failure cases.
 
-Earlier experiments used a smaller 12-channel representation. The current direction expands that representation to 35 channels so the model can see more of the synchronized engagement process instead of relying on a narrow set of averages. The added channels make it possible to represent timing, control-path behavior, visibility transitions, recoil/settling behavior, and difficulty-conditioned aim process in the same temporal window.
+## What It Actually Finds
 
-This does not make the model a verdict engine. It only gives the temporal model a richer representation of what happened before, during, and after an encounter.
+The strongest current signals are not generic "AI detections." They are measurable differences in encounter and player behavior:
 
-## Evaluation Philosophy
+- confirmed suspicious player rows have much higher temporal encounter-model scores than negative rows;
+- suspicious rows show more frequent high-scoring encounter clusters rather than only one isolated event;
+- rifle prefire-like rates, long-range fast reaction patterns, and headshot concentration separate some positives from the negative baseline;
+- some non-cheater demos still produce high scores, especially when a player has a strong headshot-heavy match with fast reaction streaks.
 
-Standard metrics such as ROC-AUC and PR-AUC are useful, but they are not sufficient for this problem. NullCS is evaluated as a review-priority system, so ranking behavior matters:
+The last point matters. NullCS is useful only if the evidence remains inspectable when the model is wrong or uncertain.
 
-- Does the labeled suspicious player appear near the top of the lobby?
-- Are normal legitimate demos quiet?
-- Are pro and high-skill stress-test slices quiet?
-- Does top-3 retrieval improve without creating broad false-positive drift?
-- Do elevated scores come with interpretable supporting features?
+## Documentation
 
-Top-1 and top-3 retrieval are important because a reviewer needs to know where to look first. Quiet legit/pro behavior is equally important because a system that over-flags strong players is not useful, even if it performs well on obvious suspicious examples.
-
-## Current Public Benchmark Read
-
-Current public-safe benchmark summary:
-
-- suspicious benchmark median / mean top-ranked signal: `0.030 / 0.060`
-- normal legit median / mean top-ranked signal: `0.0031 / 0.0037`
-- pro stress-test median / mean top-ranked signal: `0.0034 / 0.0040`
-- suspicious benchmark top-1 / top-3 retrieval: `0.575 / 0.875`
-
-These values should be read as evidence of review-priority separation, not as cheat probabilities.
+- [METHODOLOGY.md](METHODOLOGY.md) explains data construction, feature engineering, modeling, and leakage controls.
+- [RESULTS.md](RESULTS.md) reports the current benchmark metrics and failure cases.
+- [PIPELINE.md](PIPELINE.md) lists the practical commands and artifact paths.
 
 ## Repository Scope
 
-This repository is the public-safe research side of NullCS:
-
-- methodology and model-stack documentation
-- public-safe feature engineering code
-- public-safe benchmark summaries and plots
-- selected model/evaluation artifacts that are safe to discuss publicly
-- supporting documentation for how the research is framed
-
-This repository intentionally avoids shipping:
-
-- raw demos
-- private match artifacts
-- private uploads
-- internal evidence exports
-- secrets, tokens, or environment-specific configuration
-- generated build artifacts and local release caches
+This repository contains the public-safe research code, documentation, benchmark summaries, and website source for NullCS. It does not ship raw demos, private match artifacts, secrets, or enforcement tooling.
 
 ## Acknowledgements
 
-NullCS depends heavily on [`demoparser2`](https://github.com/LaihoE/demoparser), the Counter-Strike demo parsing project maintained by LaihoE and its contributors. Their work makes it practical to turn `.dem` files into structured data that can be studied, tested, and reviewed.
+NullCS depends on [`demoparser2`](https://github.com/LaihoE/demoparser), maintained by LaihoE and contributors. That parser makes it practical to turn CS2 `.dem` files into structured data for research.
 
-That project has been maintained and improved for years, and NullCS would not be possible in its current form without that foundation.
+## License
 
-## License And Redistribution
-
-This public repository does not currently grant an open-source license. The research documentation is public for review, discussion, and transparency, but redistribution of modified builds or repackaged artifacts should not be treated as an official NullCS release.
+This public repository does not currently grant an open-source license. The documentation is public for review and transparency, but redistribution of modified builds or repackaged artifacts should not be treated as an official NullCS release.

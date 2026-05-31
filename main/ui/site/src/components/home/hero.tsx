@@ -19,14 +19,14 @@ export function Hero() {
           </Reveal>
           <Reveal delay={0.06}>
             <h1 className="mt-7 max-w-4xl font-display text-4xl tracking-[-0.065em] text-white sm:text-6xl lg:text-7xl">
-              Review CS2 demos with machine learning signals that stay explainable.
+              Surface unusual CS2 demo behavior for review, not verdicts.
             </h1>
           </Reveal>
           <Reveal delay={0.12}>
             <p className="mt-6 max-w-2xl text-lg leading-8 text-zinc-400 sm:text-xl">
-              NullCS parses Counter-Strike 2 <span className="text-zinc-200">.dem</span> files, builds behavioral features,
-              and ranks review-worthy anomalies with evidence attached. It is research tooling for analyst triage, not an
-              automated ban or verdict system.
+              NullCS parses Counter-Strike 2 <span className="text-zinc-200">.dem</span> files into tick-level encounter
+              windows, computes 449 player-demo signals, and ranks review-worthy players with evidence attached. The current
+              public benchmark uses 894 demos and 281,792 encounter windows.
             </p>
           </Reveal>
           <Reveal delay={0.18}>
@@ -76,8 +76,8 @@ export function Hero() {
                   <div className="text-[0.7rem] uppercase tracking-[0.24em] text-zinc-400">Current direction</div>
                   <div className="mt-3 font-display text-2xl tracking-[-0.05em] text-white">Parse the match, rank the standouts, inspect the evidence</div>
                   <p className="mt-3 max-w-md text-sm leading-6 text-zinc-300">
-                    The hard problem is keeping suspicious benchmark slices visible while strong legitimate and pro play
-                    stay quiet enough for the output to remain useful.
+                    The model is tuned for review priority: top-ranked players, supporting rows, and benchmark context.
+                    It is not an anti-cheat or an automated ban system.
                   </p>
                   <Link href="/about" className="mt-5 inline-flex items-center gap-2 text-sm text-white transition-opacity hover:opacity-80">
                     Read the project background
