@@ -26,6 +26,7 @@ from src.utils.scoring import (
     top_signal_titles,
 )
 from src.utils.project_paths import PROCESSED_ROOT
+from src.utils.sample_weights import build_sample_weights
 from src.utils.training_mode import (
     model_artifact_paths_for_stem,
     model_artifact_paths,
@@ -67,6 +68,11 @@ def parse_args():
     ap.add_argument("--xgb-jobs", type=int, default=4, help="XGBoost internal parallel jobs for fold retraining.")
     ap.add_argument("--device", default="cpu", choices=["cpu", "cuda"], help="XGBoost device for fold retraining or saved-model scoring.")
     ap.add_argument("--artifact-stem", default=None, help="Optional artifact stem to evaluate instead of the mode default.")
+    ap.add_argument(
+        "--feature-list-path",
+        default=None,
+        help="Optional feature-list override. Defaults to the evaluated artifact stem's <stem>_features.txt.",
+    )
     ap.add_argument(
         "--upweight-positive-demos",
         default="",
@@ -224,20 +230,6 @@ def unique_preserve_order(cols: list[str]) -> list[str]:
     return list(dict.fromkeys(cols))
 
 
-def build_sample_weights(df: pd.DataFrame, demo_ids: list[str], positive_demo_weight: float) -> tuple[np.ndarray | None, dict[str, int]]:
-    normalized = {str(x).strip() for x in demo_ids if str(x).strip()}
-    if not normalized or float(positive_demo_weight) == 1.0:
-        return None, {"weighted_positive_rows": 0, "weighted_demos_found": 0}
-    weights = np.ones(len(df), dtype=float)
-    mask = df["demo_id"].astype(str).isin(normalized) & (df["label"].astype(int) == 1)
-    weights[mask.to_numpy()] = float(positive_demo_weight)
-    stats = {
-        "weighted_positive_rows": int(mask.sum()),
-        "weighted_demos_found": int(df.loc[df["demo_id"].astype(str).isin(normalized), "demo_id"].nunique()),
-    }
-    return weights, stats
-
-
 def build_demo_level_summary(out: pd.DataFrame) -> dict[str, float | int]:
     demo_rows = []
     for demo_id, group in out.groupby("demo_id"):
@@ -374,8 +366,10 @@ def main():
         df = df[df["n_players"] >= 8].copy()
         print(f"[INFO] n_players>=8 filter: rows {before_rows}->{len(df)} demos {before_demos}->{df['demo_id'].nunique()}")
 
-    feature_cols = artifact_paths["features"].read_text(encoding="utf-8").strip().splitlines()
-    ensure_no_forbidden_features(feature_cols, str(artifact_paths["features"]))
+    feature_list_path = Path(args.feature_list_path) if args.feature_list_path else artifact_paths["features"]
+    feature_cols = feature_list_path.read_text(encoding="utf-8").strip().splitlines()
+    ensure_no_forbidden_features(feature_cols, str(feature_list_path))
+    print(f"[INFO] feature list: {feature_list_path} count={len(feature_cols)}")
     X = df[feature_cols].fillna(0.0).astype(float)
     y = df["label"].values
     groups = df["demo_id"].values

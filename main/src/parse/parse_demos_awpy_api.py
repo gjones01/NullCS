@@ -17,6 +17,7 @@ from src.utils.project_paths import (
     LEGIT_PRO_RENAMED_ROOT,
     PARSED_ZIPS_ROOT,
 )
+from src.utils.parquet_io import write_df_to_parquet
 
 # ---- CONFIG ----
 NORMAL_DIR = LEGIT_NORMAL_RENAMED_ROOT
@@ -40,10 +41,6 @@ def list_demos(root: Path) -> list[Path]:
             continue
         out.append(p)
     return sorted(out)
-
-def write_df_to_parquet(df, path: Path) -> None:
-    # df is typically a Polars DataFrame in AWPy
-    df.write_parquet(str(path))
 
 def parse_one(demo_path: Path) -> bool:
     from awpy import Demo  # import here so missing awpy errors are obvious

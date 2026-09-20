@@ -13,6 +13,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.utils.scoring import top_signal_titles
+from src.utils.console import safe_print as _safe_print
 from src.utils.bootstrap_demo_ci import bootstrap_player_demo_ci
 from src.utils.project_paths import PROCESSED_ROOT
 from src.utils.behavioral_context import build_demo_interpretations, load_demo_frames
@@ -69,13 +70,6 @@ def _safe_float(x, default=None):
         return float(x)
     except Exception:
         return default
-
-
-def _safe_print(text: str) -> None:
-    try:
-        print(text)
-    except UnicodeEncodeError:
-        print(text.encode("ascii", errors="replace").decode("ascii"))
 
 
 def _normalize_steamid_series(s: pd.Series) -> pd.Series:

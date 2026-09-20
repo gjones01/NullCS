@@ -58,7 +58,6 @@ Root (`C:\NullCS`):
 - `main/src/`
   - `main/src/parse/`
     - `parse_demos_awpy_api.py`
-    - `build_events_from_zips.py`
   - `main/src/features/`
     - `build_engagement_features.py`
     - `aggregate_player_features.py`
@@ -103,23 +102,10 @@ This section lists exact script files, functions, and paths used by current `mai
   - always writes `header.json`
 - CLI args: none (hardcoded constants only)
 
-### Step B: Build canonical events parquet from zipped parses
-- File: `main/src/parse/build_events_from_zips.py`
-- Entrypoint function: `main()`
-- Key functions:
-  - `build_events_for_zip(zip_path: Path) -> bool`
-  - `read_parquet_from_zip(z, name) -> pl.DataFrame`
-  - `read_json_from_zip(z, name) -> dict`
-  - `safe_get(d, keys, default=None)`
-- Input path:
-  - `ZIPS_DIR = C:\NullCS\parsed_zips`
-- Output path (note: different root than `main/data/processed`):
-  - `OUT_ROOT = C:\NullCS\processed\demos`
-  - per demo: `C:\NullCS\processed\demos\<demo_id>\events.parquet`
-  - per demo metadata: `...\meta.json`
-- Canonical events columns written:
-  - `demo_id`, `event_id`, `event_type`, `tick`, `round_num`, `attacker_steamid`, `victim_steamid`, `is_headshot`, `weapon`, `map_name`
-- CLI args: none (hardcoded constants only)
+### Step B: (retired) Canonical events parquet from zipped parses
+
+- `main/src/parse/build_events_from_zips.py` was **deleted** in phase 2b (AUDIT.md F5): it had zero consumers and wrote to `C:/NullCS/processed/demos`, which nothing read. Do not recreate it.
+- The canonical per-demo artifact is `main/data/processed/demos/<demo_id>/engagement_features.parquet`, built by `main/src/features/build_engagement_features.py`.
 
 ### Step C: Build engagement/window-level features
 - File: `main/src/features/build_engagement_features.py`
@@ -242,10 +228,7 @@ From repo root `C:\NullCS`:
 python main/src/parse/parse_demos_awpy_api.py
 ```
 
-2. (Optional/alternate) Build canonical `events.parquet` from zipped parses
-```powershell
-python main/src/parse/build_events_from_zips.py
-```
+2. (Retired in phase 2b) The `events.parquet` builder was deleted; skip this step (see Step B above).
 
 3. Build engagement/window features
 ```powershell
@@ -283,65 +266,12 @@ python main/scripts/explain_demo.py --demo CDemo3 --name SomePlayerName
 - Those files do not exist under `main/scripts` in this workspace.
 - Actual scripts exist under `main/src/parse/` and `main/src/features/`.
 
-2. Path mismatch between events builder and main processed tree.
-- `main/src/parse/build_events_from_zips.py` outputs to `C:\NullCS\processed\demos`.
-- Aggregation/training pipeline reads from `C:\NullCS\main\data\processed\...`.
-- If you rely on `build_events_from_zips.py`, it writes outside the `main/data/processed/demos` tree used later.
+2. (Resolved in phase 2b) The events-builder path mismatch is gone: `build_events_from_zips.py` and `PROCESSED_DEMOS_ROOT` were removed. Aggregation/training read `main/data/processed/...` only.
+## 7) Guardrails Added In Phases 2a-2c / 3a (2026-09-19)
 
-3. Class imbalance handling is active and data-dependent.
-- Train/eval compute `scale_pos_weight = n_neg / max(1, n_pos)` from current labels.
-- Any label distribution shift directly changes effective model weighting.
+1. Training and evaluation default to the **mode feature-list contract** (`xgb_player_level_cs2cd_features.txt`, 449 features) and record the resolved path in `*_training_manifest.json`. Use `--feature-list-path` to pin something else, or `--no-feature-list-lock` to restore auto-select (measured: 463 columns - that is the drift this prevents).
+2. Inference/training parity: `infer_demo_from_path.aggregate_single_demo_features` delegates to `aggregate_player_features.aggregate_kill_and_encounter_frames`. Do not reintroduce copied feature math in inference code.
+3. Shared helpers to import instead of copying: `src/utils/console.py` (`safe_print`), `src/utils/sample_weights.py` (`build_sample_weights`), `src/utils/parquet_io.py` (`write_df_to_parquet`), `src/utils/demo_labels.py` (`_split_steamids`, `ensure_columns_pl`).
+4. `score_demo` now reports absent contract features before scoring them as 0.0. The `enc_*` / `enn_*` family (and `aim_process_global_score`) requires the encounter-model step, i.e. `run_infer_pipeline.py`.
+5. Evidence for all of the above: `AUDIT.md` section 10. Storage reclaimed this pass: 8.87 GB of regenerable build output. `NewAnubisTri/.venv` is the pipeline interpreter - do not delete it.
 
-4. Group split is by `demo_id` (good), but there is no temporal split.
-- `GroupKFold` avoids same-demo leakage across folds.
-- It does not simulate future-vs-past chronological deployment.
-
-5. Label quality depends on `CheaterSteamIDs.csv` completeness.
-- For `CDemo*`, per-player labels come from exact SteamID match.
-- Missing `CDemo` row => that entire demo is skipped by aggregator (`[WARN] ... Skipping this demo`).
-
-6. Potential schema mismatch in explanation helper.
-- `build_engagement_features.py` writes `t0_visible`.
-- `main/src/utils/explain_demo.py` evidence column list expects `first_los_tick` (not produced by current feature builder), so that column is omitted from evidence output.
-
-7. Evaluation script does not load saved model file.
-- `MODEL_PATH` is defined in `evaluate_xgb_gridcv.py` but not used.
-- Evaluation retrains fold models from hardcoded `BEST_PARAMS` and current feature file.
-
-8. Overwrite defaults can silently replace artifacts.
-- `build_engagement_features.py`: `OVERWRITE=True`
-- `aggregate_player_features.py`: `OVERWRITE=True`
-
-## 5) Minimal Verified Pipeline Order (Recommended)
-
-1. `python main/src/parse/parse_demos_awpy_api.py`
-2. `python main/src/features/build_engagement_features.py`
-3. `python main/src/features/aggregate_player_features.py`
-4. `python main/scripts/train_xgb_gridcv.py`
-5. `python main/scripts/evaluate_xgb_gridcv.py`
-6. `python main/scripts/explain_demo.py --demo <DemoID>`
-
-This order matches the file paths and I/O expected by the current `main` training/evaluation scripts.
-
-## 6) Smoke Test
-
-Use this minimal end-to-end smoke test (evaluation -> explain report) from repo root:
-
-```powershell
-python main/scripts/evaluate_xgb_gridcv.py; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; python main/scripts/explain_demo.py --demo CDemo3; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-```
-
-Expected console output includes:
-- `[INFO] loaded model from: C:\NullCS\main\data\processed\models\xgb_player_level_gridcv.json`
-- `[OOF] PR-AUC=...  ROC-AUC=...`
-- `[OK] wrote C:\NullCS\main\data\processed\reports\ranked_player_demo_suspicion.csv`
-- `[OK] wrote C:\NullCS\main\data\processed\reports\ranked_demo_suspicion.csv`
-- `=== DEMO REPORT: CDemo3 ===`
-- `[OK] wrote: C:\NullCS\main\data\processed\reports\CDemo3\<steamid>`
-
-Expected files updated/created:
-- `main/data/processed/reports/ranked_player_demo_suspicion.csv`
-- `main/data/processed/reports/ranked_demo_suspicion.csv`
-- `main/data/processed/reports/CDemo3/<steamid>/top_player_row.json`
-- `main/data/processed/reports/CDemo3/<steamid>/reasons.json`
-- `main/data/processed/reports/CDemo3/<steamid>/evidence_fast_rt.csv`

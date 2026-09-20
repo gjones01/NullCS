@@ -15,17 +15,11 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.utils.demo_labels import load_cheater_map
+from src.utils.console import safe_print as _safe_print
 from src.utils.project_paths import CHEATER_DEMOS_ROOT, LEGIT_NORMAL_RENAMED_ROOT, LEGIT_PRO_RENAMED_ROOT, PROCESSED_ROOT, REPORTS_ROOT
 
 
 CHEATER_CSV = PROCESSED_ROOT / "CheaterSteamIDs.csv"
-
-
-def _safe_print(text: str) -> None:
-    try:
-        print(text)
-    except UnicodeEncodeError:
-        print(text.encode("ascii", errors="replace").decode("ascii"))
 
 
 def parse_args() -> argparse.Namespace:

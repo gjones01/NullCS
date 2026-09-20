@@ -34,14 +34,9 @@ from src.utils.scoring import (
     top_signal_titles,
 )
 from src.utils.model_registry import resolve_model_artifacts
+from src.utils.console import safe_print as _safe_print
+from src.utils.parquet_io import write_df_to_parquet
 from src.utils.project_paths import DEMOS_ROOT, MODELS_ROOT, PARSE_ZIPS_ROOT, PROCESSED_ROOT, REPORTS_ROOT
-
-
-def _safe_print(text: str) -> None:
-    try:
-        print(text)
-    except UnicodeEncodeError:
-        print(text.encode("ascii", errors="replace").decode("ascii"))
 
 
 def parse_args() -> argparse.Namespace:
@@ -60,10 +55,6 @@ def make_demo_id(dem_path: Path) -> str:
     now = datetime.now().strftime("%Y%m%d_%H%M%S")
     h = hashlib.sha1(str(dem_path.resolve()).encode("utf-8")).hexdigest()[:8]
     return f"TEST_{now}_{h}"
-
-
-def write_df_to_parquet(df, path: Path) -> None:
-    df.write_parquet(str(path))
 
 
 def parse_dem_to_zip(dem_path: Path, zip_path: Path) -> None:
@@ -131,127 +122,62 @@ def build_engagement_for_demo(demo_id: str, zip_path: Path) -> Path:
     return out_path
 
 
-def aggregate_single_demo_features(demo_id: str, eng_path: Path) -> pd.DataFrame:
+def aggregate_single_demo_features(demo_id: str, eng_path: Path, encounter_path: Path | None = None) -> pd.DataFrame:
+    """Aggregate one demo with the canonical training-time aggregator.
+
+    Delegates to ``aggregate_player_features.aggregate_kill_and_encounter_frames``
+    so inference features cannot drift from training features (AUDIT.md finding F4).
+    This function previously carried ~122 lines of copied derived-feature math
+    (laplace rates, weapon splits, *_w, rt_iqr_80, dist_tail, *_shrunk, demo norms).
+
+    ``encounter_path`` is optional. When it is None the encounter (``enc_*``)
+    columns are absent and are filled with 0.0 at scoring time, exactly as before.
+    ``run_infer_pipeline.py`` is the reference caller: it scores encounter windows
+    first and then passes them in.
+    """
     df = pd.read_parquet(eng_path)
     if df.empty:
         raise RuntimeError(f"No engagement rows found for demo {demo_id}.")
+
+    required = ("attacker_steamid", "kill_tick", "rt_ticks", "distance")
+    missing = [c for c in required if c not in df.columns]
+    if missing:
+        raise ValueError(f"Engagement features missing {missing} for demo {demo_id}: {eng_path}")
 
     df = df.copy()
     df["demo_id"] = str(demo_id)
     df["label"] = 0
     df["attacker_steamid"] = df["attacker_steamid"].astype(str).str.strip()
-    if "attacker_name" not in df.columns:
-        df["attacker_name"] = ""
-
     for col, default in [
         ("map_name", ""),
-        ("rt_ticks", np.nan),
-        ("distance", np.nan),
-        ("headshot", False),
-        ("is_thrusmoke", False),
-        ("round_num", np.nan),
-        ("kill_tick", np.nan),
+        ("attacker_name", ""),
         ("victim_steamid", ""),
         ("weapon", ""),
+        ("headshot", False),
+        ("is_thrusmoke", False),
+        ("is_micropeek_4", False),
+        ("round_num", np.nan),
     ]:
         if col not in df.columns:
             df[col] = default
 
-    key_cols = ["demo_id", "map_name", "attacker_steamid", "attacker_name", "label"]
-    rows = [agg_mod.build_row(g) for _, g in df.groupby(key_cols, sort=False)]
-    agg = pd.DataFrame(rows)
-    agg = agg[agg["n_kills_with_rt"] >= agg_mod.MIN_KILLS].copy()
+    encounter_df = pd.DataFrame()
+    if encounter_path is not None and Path(encounter_path).exists():
+        candidate = pd.read_parquet(encounter_path)
+        if candidate is not None and not candidate.empty:
+            encounter_df = candidate.copy()
+            encounter_df["demo_id"] = str(demo_id)
+            encounter_df["label"] = 0
+            encounter_df["attacker_steamid"] = encounter_df["attacker_steamid"].astype(str).str.strip()
+            if "attacker_name" not in encounter_df.columns:
+                encounter_df["attacker_name"] = ""
+
+    agg = agg_mod.aggregate_kill_and_encounter_frames(df, encounter_df)
     if agg.empty:
         raise RuntimeError(
             f"No players pass MIN_KILLS={agg_mod.MIN_KILLS} in demo {demo_id}. "
             "Cannot score with training-compatible features."
         )
-
-    n_players = df.groupby("demo_id")["attacker_steamid"].nunique().rename("n_players")
-    agg = agg.merge(n_players, on="demo_id", how="left")
-    agg["kills_per_player"] = agg["n_kills"] / agg["n_players"].replace(0, np.nan)
-
-    agg["fast_rt_rate"] = [agg_mod.laplace(s, n) for s, n in zip(agg["fast_rt_count"], agg["rt_n"])]
-    agg["headshot_rate"] = [agg_mod.laplace(s, n) for s, n in zip(agg["headshot_count"], agg["hs_n"])]
-    agg["rt_le_2_rate"] = [agg_mod.laplace(s, n) for s, n in zip(agg["rt_le_2_count"], agg["rt_n"])]
-    agg["rt_le_4_rate"] = [agg_mod.laplace(s, n) for s, n in zip(agg["rt_le_4_count"], agg["rt_n"])]
-    agg["prefire_rate"] = [agg_mod.laplace(s, n) for s, n in zip(agg["prefire_count"], agg["n_kills"])]
-    agg["prefire_long_range_rate"] = [agg_mod.laplace(s, n) for s, n in zip(agg["prefire_long_range_count"], agg["n_kills"])]
-    agg["prefire_repeat_victims"] = [agg_mod.laplace(s, n) for s, n in zip(agg["prefire_victim_n"], agg["n_victims"])]
-    agg["thrusmoke_kill_rate"] = [agg_mod.laplace(s, n) for s, n in zip(agg["thrusmoke_kills"], agg["n_kills"])]
-    agg["thrusmoke_round_rate"] = [agg_mod.laplace(s, n) for s, n in zip(agg["thrusmoke_rounds"], agg["rounds_played"])]
-    agg["long_range_fast_rt_rate"] = [agg_mod.laplace(s, n) for s, n in zip(agg["long_range_fast_rt_count"], agg["long_range_kills_with_rt"])]
-    agg["long_range_fast_rt_rate_4"] = [agg_mod.laplace(s, n) for s, n in zip(agg["long_range_fast_rt_4_count"], agg["long_range_kills_with_rt"])]
-
-    agg["rifle_kill_share"] = [agg_mod.laplace(s, n) for s, n in zip(agg["rifle_kills"], agg["n_kills"])]
-    agg["pistol_kill_share"] = [agg_mod.laplace(s, n) for s, n in zip(agg["pistol_kills"], agg["n_kills"])]
-    agg["awp_smg_kill_share"] = [agg_mod.laplace(s, n) for s, n in zip(agg["awp_smg_kills"], agg["n_kills"])]
-
-    agg["rifle_fast_rt_rate"] = [agg_mod.laplace(s, n) for s, n in zip(agg["rifle_fast_rt_count"], agg["rifle_kills"])]
-    agg["pistol_fast_rt_rate"] = [agg_mod.laplace(s, n) for s, n in zip(agg["pistol_fast_rt_count"], agg["pistol_kills"])]
-    agg["awp_smg_fast_rt_rate"] = [agg_mod.laplace(s, n) for s, n in zip(agg["awp_smg_fast_rt_count"], agg["awp_smg_kills"])]
-
-    agg["prefire_rate_rifle"] = [agg_mod.laplace(s, n) for s, n in zip(agg["rifle_prefire_count"], agg["rifle_kills"])]
-    agg["prefire_rate_pistol"] = [agg_mod.laplace(s, n) for s, n in zip(agg["pistol_prefire_count"], agg["pistol_kills"])]
-    agg["prefire_rate_awp_smg"] = [agg_mod.laplace(s, n) for s, n in zip(agg["awp_smg_prefire_count"], agg["awp_smg_kills"])]
-
-    agg["thrusmoke_rate_rifle"] = [agg_mod.laplace(s, n) for s, n in zip(agg["rifle_thrusmoke_count"], agg["rifle_kills"])]
-    agg["thrusmoke_rate_pistol"] = [agg_mod.laplace(s, n) for s, n in zip(agg["pistol_thrusmoke_count"], agg["pistol_kills"])]
-    agg["thrusmoke_rate_awp_smg"] = [agg_mod.laplace(s, n) for s, n in zip(agg["awp_smg_thrusmoke_count"], agg["awp_smg_kills"])]
-
-    agg["prefire_rate_w"] = agg["prefire_rate"] * np.log1p(agg["rt_n"])
-    agg["thrusmoke_rate_w"] = agg["thrusmoke_kill_rate"] * np.log1p(agg["n_kills"])
-    agg["fast_rt_rate_w"] = agg["fast_rt_rate"] * np.log1p(agg["rt_n"])
-    agg["rt_iqr_80"] = agg["rt_p90"] - agg["rt_p10"]
-    agg["dist_tail"] = agg["dist_p90"] - agg["dist_median"]
-
-    global_rt_median = float(agg["rt_median"].median(skipna=True))
-    global_rt_p10 = float(agg["rt_p10"].median(skipna=True))
-    global_rt_p90 = float(agg["rt_p90"].median(skipna=True))
-    global_dist_median = float(agg["dist_median"].median(skipna=True))
-
-    agg["rt_median_shrunk"] = (agg["rt_median"] * agg["rt_n"] + global_rt_median * agg_mod.SHRINK_K) / (agg["rt_n"] + agg_mod.SHRINK_K)
-    agg["rt_p10_shrunk"] = (agg["rt_p10"] * agg["rt_n"] + global_rt_p10 * agg_mod.SHRINK_K) / (agg["rt_n"] + agg_mod.SHRINK_K)
-    agg["rt_p90_shrunk"] = (agg["rt_p90"] * agg["rt_n"] + global_rt_p90 * agg_mod.SHRINK_K) / (agg["rt_n"] + agg_mod.SHRINK_K)
-    agg["dist_median_shrunk"] = (agg["dist_median"] * agg["n_kills"] + global_dist_median * agg_mod.SHRINK_K) / (agg["n_kills"] + agg_mod.SHRINK_K)
-
-    rt_derived = [
-        "rt_mean", "rt_median", "rt_p10", "rt_p90", "rt_std",
-        "rt_median_shrunk", "rt_p10_shrunk", "rt_p90_shrunk",
-        "fast_rt_rate", "fast_rt_rate_w", "rt_le_2_rate", "rt_le_4_rate",
-        "prefire_rate", "prefire_rate_w", "prefire_long_range_rate", "prefire_repeat_victims",
-        "long_range_fast_rt_rate", "long_range_fast_rt_rate_4",
-        "max_fast_rt_streak", "max_prefire_streak",
-        "rifle_fast_rt_rate", "pistol_fast_rt_rate", "awp_smg_fast_rt_rate",
-        "prefire_rate_rifle", "prefire_rate_pistol", "prefire_rate_awp_smg",
-    ]
-    low_evidence = agg["rt_n"] < agg_mod.MIN_RT_EVIDENCE
-    for c in rt_derived:
-        if c in agg.columns:
-            agg.loc[low_evidence, c] = np.nan
-
-    norm_map = {
-        "rt_median": ("rt_median_pct", "rt_median_z"),
-        "prefire_rate": ("prefire_pct", "prefire_z"),
-        "thrusmoke_kill_rate": ("thrusmoke_pct", "thrusmoke_z"),
-        "headshot_rate": ("hs_pct", "hs_z"),
-        "long_range_fast_rt_rate_4": ("long_fast_rt_pct", "long_fast_rt_z"),
-        "max_thrusmoke_round_streak": ("max_thr_round_streak_pct", "max_thr_round_streak_z"),
-        "dist_tail": ("dist_tail_pct", "dist_tail_z"),
-    }
-    for base_col, (pct_col, z_col) in norm_map.items():
-        if base_col in agg.columns:
-            agg = agg_mod.add_demo_norms(agg, base_col, pct_col, z_col)
-
-    helper_cols = [
-        "headshot_count", "fast_rt_count", "rt_le_2_count", "rt_le_4_count",
-        "prefire_count", "prefire_long_range_count", "prefire_victim_n",
-        "long_range_fast_rt_count", "long_range_fast_rt_4_count",
-        "rifle_fast_rt_count", "pistol_fast_rt_count", "awp_smg_fast_rt_count",
-        "rifle_prefire_count", "pistol_prefire_count", "awp_smg_prefire_count",
-        "rifle_thrusmoke_count", "pistol_thrusmoke_count", "awp_smg_thrusmoke_count",
-    ]
-    agg = agg.drop(columns=[c for c in helper_cols if c in agg.columns])
     return agg
 
 
@@ -260,9 +186,17 @@ def score_demo(agg: pd.DataFrame, model_artifact: str | None = None) -> pd.DataF
     model_path, features_path = resolve_model_artifacts(MODELS_ROOT, requested_model)
     feature_cols = features_path.read_text(encoding="utf-8").strip().splitlines()
     ensure_no_forbidden_features(feature_cols, str(features_path))
-    for c in feature_cols:
-        if c not in agg.columns:
-            agg[c] = np.nan
+    missing_features = [c for c in feature_cols if c not in agg.columns]
+    for c in missing_features:
+        agg[c] = np.nan
+    if missing_features:
+        # Was silent before: absent contract features are scored as 0.0. Keep the
+        # behaviour (so this path stays comparable to earlier runs) but report it.
+        _safe_print(
+            f"[WARN] {len(missing_features)}/{len(feature_cols)} contract features are absent from this demo's "
+            f"aggregation and will be scored as 0.0 (first 8: {missing_features[:8]}). "
+            "The enc_* family requires the encounter-model step; see run_infer_pipeline.py."
+        )
 
     X = agg[feature_cols].fillna(0.0).astype(float)
     model = XGBClassifier()

@@ -1,116 +1,93 @@
 # Methodology
 
-NullCS is built as a post-match behavioral analysis pipeline. The goal is not to classify an account from a single match. The goal is to rank players and encounters that deserve manual review, with enough context to understand why the score moved.
+NullCS looks at post-match telemetry. It never judges an account from one round or
+one kill. It ranks players and moments worth a human look, and keeps enough
+evidence to explain why a score moved.
 
-## Data Sources
+## 1. Data
 
-The current public artifacts combine two kinds of data:
+Two sources feed the current artifacts:
 
-- AWPy/demoparser-derived parsed CS2 demos used by the original player-level pipeline.
-- CS2CD benchmark splits with `with_cheater_present` and `no_cheater_present` groups.
+- parsed CS2 demos from the original player-level pipeline (demoparser/AWPy based);
+- the CS2CD benchmark set, split into matches with and without a known cheater.
 
-Current verified artifacts:
+Verified sizes:
 
-- Encounter-model data: 894 demos and 281,792 encounter windows.
-- Player-level grouped evaluation data: 860 demos and 6,886 player-demo rows after the `n_players >= 8` filter.
-- Player-level class balance after filtering: 992 positive rows and 5,894 negative rows.
+| Item | Value |
+| --- | ---: |
+| Demos in the window-model data | 894 |
+| Engagement windows | 281,792 |
+| Demos in player evaluation (after the 8-player filter) | 860 |
+| Player rows | 6,886 (992 positive / 5,894 negative) |
 
-Labels are used for research evaluation. They are not treated as proof that every elevated event is cheating behavior.
+Labels are used to measure the research pipeline. They are not proof that every
+elevated moment is cheating.
 
-## Parse And Event Construction
+## 2. Engagement windows
 
-Raw `.dem` files are parsed into structured tables. The important outputs are:
+A window is a short slice of ticks around one player-versus-player interaction.
+Windows describe *process*, not only outcome:
 
-- tick-level player state;
-- kills, damage, shots, grenades, smokes, infernos, bomb events, rounds, and footsteps when available;
-- metadata such as map name and demo identifier.
+- what the attacker could see, and when the target first became visible;
+- how the aim moved before and after that moment;
+- whether a shot or damage landed before the aim settled;
+- how distance and movement changed;
+- how mouse and view input behaved after the target was acquired.
 
-The event builder normalizes these into per-demo artifacts so feature code does not depend on parser-specific table shapes.
+## 3. Window model
 
-## Encounter Windows
+A small temporal CNN reads fixed-length windows: 35 channels over 32 ticks. The
+channels cover aim error, mouse delta, view/command gaps, distance and speed,
+angular velocity and jerk, visibility state and transitions, movement state
+(walking, airborne, scoped) and shot/damage timing.
 
-An encounter window is a short segment around a player-victim interaction. Windows are designed to capture process:
+The CNN scores windows only. Its scores are summarised per player (mean, top-k
+mean, high-score rate and similar) and become inputs to the ranking model.
 
-- what the attacker could see;
-- how aim moved before and after visibility;
-- whether shots or damage occurred before stable acquisition;
-- how movement and distance changed during the window;
-- whether mouse/control input became unusually quiet or bursty after acquisition.
+## 4. Player features
 
-The current temporal CNN uses fixed-length sequences with 35 channels.
+Per player and per demo the pipeline computes 449 features, in plain groups:
 
-## Temporal CNN Inputs
+- **Counts:** kills, rounds, victims, weapons.
+- **Reaction time:** typical value, spread, and how often it is very short.
+- **Precision and habit:** headshot rate, through-smoke rate, prefire-like rate,
+  long-range fast reactions, weapon mix.
+- **Aim process:** how quickly aim settles, how noisy it stays, how it collapses
+  onto the target.
+- **Movement and context:** distance, speed, visibility exposure.
+- **Window-model summaries.**
 
-The encounter model consumes synchronized per-tick channels:
+Identifiers such as SteamID and player name are never used as features.
 
-- aim error and aim-error derivatives;
-- mouse delta magnitude and command yaw/pitch deltas;
-- command-view gaps;
-- distance, attacker speed, and relative speed;
-- angular velocity and angular jerk;
-- line-of-sight angular velocity and jerk;
-- visibility state and visibility transition markers;
-- ticks since visibility;
-- walking, airborne, scoped, and flashed state;
-- shot and damage event indicators;
-- ticks to/from nearest shot and damage event.
+## 5. Ranking model
 
-The CNN is an encounter-level model. It does not produce the final player ranking by itself. Its out-of-fold encounter scores are aggregated into player-demo features such as mean score, top-3 mean, high-score rate, low-visibility score, and kill-end score.
+Gradient-boosted trees over the 449 features, evaluated with grouped
+cross-validation:
 
-## Player-Level Features
+- groups are demo IDs, so a match never lands in both training and validation;
+- class imbalance is handled with data-dependent weighting;
+- the saved scores are isotonic-calibrated, which improves Brier score and log loss.
 
-The current CS2CD player-level model uses 449 features. Major groups include:
+Calibrated or not, the output is a review priority, not a probability suitable for
+enforcement.
 
-- kill and support counts;
-- reaction-time distribution features;
-- headshot, through-smoke, prefire-like, and long-range fast-reaction rates;
-- weapon mix and dominant weapon share;
-- victim spread and round concentration;
-- encounter exposure and visible-ratio distributions;
-- time-to-shot and time-to-damage distributions;
-- aim-error, aim-acquire, aim-dwell, aim-collapse, and aim-range summaries;
-- snap velocity, angular jerk, mouse delta, and post-acquire quietness summaries;
-- movement and distance context;
-- difficulty-conditioned precision;
-- temporal CNN aggregate outputs.
+## 6. Keeping ourselves honest
 
-The model excludes identifiers such as SteamID from the feature set.
+- **Grouped splits** by demo ID prevent same-match leakage.
+- **Identifiers are excluded** from the feature set.
+- **The feature list is locked** to a published 449-feature file, so a training run
+  cannot silently change the contract, and the manifest records which file was used.
+- **Training and inference share one aggregation implementation**, so served
+  features cannot drift from trained features.
+- **Known limit:** the split is match-isolated but not chronological. It measures
+  generalisation across demos, not future drift.
 
-## Model Stack
+## 7. How to read a score
 
-The current public stack has two main layers:
+| Score | What to do |
+| --- | --- |
+| High | Inspect this player first. |
+| Medium | Check whether the evidence is concentrated or thin. |
+| Low | The measured behaviour did not stand out. |
 
-1. **Temporal encounter CNN**
-   - 35 input channels.
-   - Sequence length: 32 ticks.
-   - Out-of-fold encounter evaluation: PR-AUC 0.566, ROC-AUC 0.853.
-
-2. **Player-level XGBoost ranking model**
-   - 449 features.
-   - Grouped by `demo_id` for cross-validation/evaluation.
-   - Best public CS2CD configuration uses 800 estimators, max depth 3, learning rate 0.03, and data-dependent class weighting.
-   - Out-of-fold player-level evaluation: PR-AUC 0.796, ROC-AUC 0.956.
-
-Calibration is currently isotonic. It improves Brier score and log loss in the saved calibration summary, but calibrated scores are still review signals, not probabilities suitable for enforcement.
-
-## Leakage Controls
-
-Current controls:
-
-- Grouped splits use `demo_id`, preventing rows from the same demo from appearing in both train and validation folds.
-- Identifier columns such as `attacker_steamid` and `attacker_name` are excluded from training features.
-- CS2CD is used for training/evaluation enrichment; UI upload inference remains a separate parse/inference path.
-
-Known limitation:
-
-- GroupKFold is match-isolated but not chronological. It tests generalization across demos, not future deployment drift.
-
-## Interpretation Rules
-
-NullCS scores should be read as review priority:
-
-- High score: inspect the player and supporting rows first.
-- Medium score: check whether the evidence is concentrated or thin.
-- Low score: current measured features did not produce a strong review signal.
-
-No single feature or model output is a verdict.
+No single feature and no single score is a verdict.

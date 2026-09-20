@@ -18,8 +18,10 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.utils.project_paths import PROCESSED_ROOT
+from src.utils.sample_weights import build_sample_weights
 from src.utils.scoring import ensure_no_forbidden_features
 from src.utils.training_mode import (
+    default_feature_list_path,
     model_artifact_paths_for_stem,
     model_artifact_paths,
     player_features_path,
@@ -67,7 +69,15 @@ def parse_args() -> argparse.Namespace:
     ap.add_argument(
         "--feature-list-path",
         default=None,
-        help="Optional path to a newline-delimited feature list. When provided, training is locked to exactly these features.",
+        help=(
+            "Optional path to a newline-delimited feature list. Defaults to the mode/stem contract file "
+            "(e.g. xgb_player_level_cs2cd_features.txt) when one exists."
+        ),
+    )
+    ap.add_argument(
+        "--no-feature-list-lock",
+        action="store_true",
+        help="Disable the default feature-list lock and auto-select all numeric columns (legacy behaviour).",
     )
     ap.add_argument(
         "--fixed-params-json",
@@ -87,20 +97,6 @@ def current_commit_hash() -> str | None:
         return res.stdout.strip() or None
     except Exception:
         return None
-
-
-def build_sample_weights(df: pd.DataFrame, demo_ids: list[str], positive_demo_weight: float) -> tuple[pd.Series, dict[str, int]]:
-    weights = pd.Series(1.0, index=df.index, dtype=float)
-    normalized = {str(x).strip() for x in demo_ids if str(x).strip()}
-    if not normalized or float(positive_demo_weight) == 1.0:
-        return weights, {"weighted_positive_rows": 0, "weighted_demos_found": 0}
-    mask = df["demo_id"].astype(str).isin(normalized) & (df["label"].astype(int) == 1)
-    weights.loc[mask] = float(positive_demo_weight)
-    stats = {
-        "weighted_positive_rows": int(mask.sum()),
-        "weighted_demos_found": int(df.loc[df["demo_id"].astype(str).isin(normalized), "demo_id"].nunique()),
-    }
-    return weights, stats
 
 
 def main():
@@ -130,13 +126,30 @@ def main():
     groups = df["demo_id"].values
     exclude = {"label", "demo_id", "map_name", "attacker_name", "attacker_steamid", "dataset_source"}
     if args.feature_list_path:
-        feature_cols = [line.strip() for line in Path(args.feature_list_path).read_text(encoding="utf-8").splitlines() if line.strip()]
+        feature_list_path = Path(args.feature_list_path)
+    elif args.no_feature_list_lock:
+        feature_list_path = None
+    else:
+        # Default lock: the stem's own list if an experiment published one, else
+        # the mode contract (CS2CD -> 449 features). See AUDIT.md F3.
+        feature_list_path = default_feature_list_path(MODELS_ROOT, train_mode, artifact_stem or None)
+    if feature_list_path is not None:
+        feature_cols = [line.strip() for line in feature_list_path.read_text(encoding="utf-8").splitlines() if line.strip()]
         missing = [c for c in feature_cols if c not in df.columns]
         if missing:
             raise KeyError(f"Requested feature list has columns missing from training table: {missing[:20]}")
-        print(f"[INFO] locked feature list from {args.feature_list_path} count={len(feature_cols)}")
+        origin = "explicit" if args.feature_list_path else "mode/stem default"
+        print(f"[INFO] locked feature list ({origin}) from {feature_list_path} count={len(feature_cols)}")
+        if not args.feature_list_path and artifact_stem:
+            stem_feat = MODELS_ROOT / f"{artifact_stem}_features.txt"
+            if stem_feat.exists() and stem_feat != feature_list_path:
+                print(
+                    f"[WARN] {stem_feat.name} exists but was NOT used (mode contract takes precedence); "
+                    "pass --feature-list-path to pin it explicitly."
+                )
     else:
         feature_cols = [c for c in df.columns if c not in exclude and pd.api.types.is_numeric_dtype(df[c])]
+        print("[INFO] feature list NOT locked: auto-selecting numeric columns (legacy behaviour)")
     excluded_features = [x.strip() for x in str(args.exclude_features or "").split(",") if x.strip()]
     if excluded_features:
         feature_cols = [c for c in feature_cols if c not in set(excluded_features)]
@@ -202,7 +215,7 @@ def main():
             scale_pos_weight=scale_pos_weight,
             **best_params,
         )
-        best_model.fit(X, y, sample_weight=sample_weights.values)
+        best_model.fit(X, y, sample_weight=sample_weights)
         best_score = None
     else:
         cv = GroupKFold(n_splits=N_SPLITS)
@@ -226,7 +239,7 @@ def main():
                 random_state=RANDOM_STATE,
                 **common_search_kwargs,
             )
-        search.fit(X, y, sample_weight=sample_weights.values)
+        search.fit(X, y, sample_weight=sample_weights)
 
         print("\n[RESULT] Best PR-AUC (CV):", search.best_score_)
         print("[RESULT] Best params:")
@@ -264,7 +277,7 @@ def main():
         "upweight_positive_demos": upweight_positive_demos,
         "positive_demo_weight": float(args.positive_demo_weight),
         "weight_stats": weight_stats,
-        "feature_list_path": str(args.feature_list_path) if args.feature_list_path else None,
+        "feature_list_path": str(feature_list_path) if feature_list_path is not None else None,
     }
     artifact_paths["best_params"].write_text(json.dumps(best_params_payload, indent=2), encoding="utf-8")
 
@@ -305,7 +318,7 @@ def main():
         "upweight_positive_demos": upweight_positive_demos,
         "positive_demo_weight": float(args.positive_demo_weight),
         "weight_stats": weight_stats,
-        "feature_list_path": str(args.feature_list_path) if args.feature_list_path else None,
+        "feature_list_path": str(feature_list_path) if feature_list_path is not None else None,
         "aggregate_summary": aggregate_summary,
     }
     artifact_paths["training_manifest"].write_text(json.dumps(manifest, indent=2), encoding="utf-8")
