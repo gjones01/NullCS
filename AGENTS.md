@@ -275,3 +275,6 @@ python main/scripts/explain_demo.py --demo CDemo3 --name SomePlayerName
 4. `score_demo` now reports absent contract features before scoring them as 0.0. The `enc_*` / `enn_*` family (and `aim_process_global_score`) requires the encounter-model step, i.e. `run_infer_pipeline.py`.
 5. Evidence for all of the above: `AUDIT.md` section 10. Storage reclaimed this pass: 8.87 GB of regenerable build output. `NewAnubisTri/.venv` is the pipeline interpreter - do not delete it.
 
+6. The desktop bundle is **generated, gitignored, and stale by default**: `main/ui/web/src-tauri/resources/nullcs-backend` carries a compiled `nullcs-backend.exe`, so changing the model pin (or any backend code) does nothing for the desktop app until `main/ui/web/scripts/prepare-desktop-backend.ps1` is re-run. Verify with `AUDIT.md` section 11, not by reading the source tree.
+7. `prepare-desktop-backend.ps1` must not use `--collect-submodules xgboost`: importing `xgboost.testing` raises a pytest `Skipped` (a `BaseException`, so PyInstaller does not catch it) and aborts the build. Use the hook in `main/ui/web/scripts/pyinstaller-hooks/` via `--additional-hooks-dir` (F36).
+

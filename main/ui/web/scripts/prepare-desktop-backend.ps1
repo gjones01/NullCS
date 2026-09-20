@@ -80,11 +80,11 @@ if (-not $SkipSidecarBuild) {
     --collect-submodules main `
     --collect-submodules src `
     --collect-submodules demoparser2 `
-    --collect-submodules xgboost `
     --collect-submodules sklearn `
     --collect-submodules torch `
     --collect-submodules uvicorn `
     --collect-submodules fastapi `
+    --additional-hooks-dir (Join-Path $PSScriptRoot "pyinstaller-hooks") `
     --hidden-import uvicorn.protocols.http.h11_impl `
     --hidden-import uvicorn.lifespan.on `
     --hidden-import multipart `

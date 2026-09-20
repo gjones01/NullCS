@@ -530,8 +530,8 @@ glossary, Q&A and open items.
    aggregated player table is still re-prepared in `analyze_*`, `calibrate_model` (F12).
 4. Owner calls still pending: **F30** (orphaned rank-selection report dirs) and the
    **depth4** lead.
-5. Re-run `prepare-desktop-backend.ps1` so the bundled backend inherits the pinned model
-   artifact and drops the deleted orphan script.
+5. ~~Re-run `prepare-desktop-backend.ps1`~~ **done in section 11** (F35/F36): bundle rebuilt,
+   pin verified inside the payload, orphan script absent.
 
 ---
 ### 10.8 Dataset clone history reclaimed (owner decision, executed)
@@ -560,4 +560,77 @@ Provenance note: `AUDIT.md` was rewritten by an external process about a minute 
 `b8e221f`, corrupting one unrelated paragraph at line ~122 (wrapped mid-word, `Root-lev` / `el`).
 The file was restored from the commit and section 10 content was not affected. If that re-wrap
 reappears, it is not coming from the pipeline.
+
+---
+
+## 11. Desktop backend bundle: stale pin and a broken build (F35, F36) (2026-09-19)
+
+### 11.1 F35 - the shipped bundle did not carry the pin
+
+`main/ui/web/src-tauri/resources/nullcs-backend` (gitignored, 301.3 MB, containing a
+293.5 MB `nullcs-backend.exe`) is what the desktop app actually runs
+(`tauri.conf.json` bundles `resources/nullcs-backend`). Its copy of
+`main/src/utils/model_registry.py` had **no `DEFAULT_MODEL_STEM` at all**, so the packaged
+app still resolved the model artifact by newest mtime and would have loaded
+`xgb_player_level_cs2cd_ranksel_child5` - the exact F2 defect closed in `7850cc1`, still
+live in the shipped binary, and for the same reason uncalibrated.
+
+The copied model *file* was already correct (`f9016d95a144e100...`); only the code was stale.
+Other stale payload files: `project_paths.py`, `run_infer_pipeline.py`,
+`aggregate_player_features.py`, and the deleted `main/src/parse/build_events_from_zips.py`,
+which was still being shipped inside the bundle.
+
+### 11.2 F36 - `prepare-desktop-backend.ps1` could not run at all
+
+The script passed `--collect-submodules xgboost`. PyInstaller recurses by *importing* each
+subpackage, so it imported `xgboost.testing`, which executes
+`pytest.importorskip("hypothesis")`. pytest's `Skipped` derives from `BaseException`, so it
+escapes the `except Exception` guard in `PyInstaller.utils.hooks._collect_submodules` and
+kills the build (xgboost 3.3.0, pytest present, hypothesis absent):
+
+```
+RuntimeError: Child process call to _collect_submodules() failed with:
+  Skipped: could not import 'hypothesis': No module named 'hypothesis'
+```
+
+Fix: new `main/ui/web/scripts/pyinstaller-hooks/hook-xgboost.py` collects every xgboost
+submodule except `xgboost.testing` / `xgboost.tests`, and the CLI flag is replaced by
+`--additional-hooks-dir (Join-Path $PSScriptRoot "pyinstaller-hooks")`. `collect_submodules`
+applies the filter *before* recursing, so the offending module is never imported. No new
+dependency is added and pytest/hypothesis stay out of the binary.
+
+### 11.3 Rebuild evidence
+
+| Check | Result |
+| --- | --- |
+| `default_model_stem()` from the *bundled* code | `xgb_player_level_cs2cd` |
+| `resolve_model_artifacts()` from the bundled code | `xgb_player_level_cs2cd.json` + `..._features.txt` |
+| Bundled canonical model sha256 (16) | `F9016D95A144E100` (matches the pinned artifact) |
+| `build_events_from_zips.py` in payload | absent |
+| `console.py` / `sample_weights.py` / `parquet_io.py` in payload | present (phase 2a code ships) |
+| `AGENTS.md` and packaging-only files | stripped from payload |
+| Rebuilt exe / bundle total / manifest | 292.6 MB / 314 MB / 78 files, regenerated 2026-09-19 21:59 |
+| PyInstaller warnings | only optional deps (`dask`, `tensorboard`, `panel`, `pyspark`); no error |
+
+The old bundle was moved aside to `%TEMP%\nullcs-backend-bak-20260919` before the rebuild, so
+the previous payload can be restored if a Tauri/NSIS build needs it.
+
+### 11.4 Repository sync
+
+The remediation branch was behind `origin` by two commits (the site work had been committed
+twice from different clones: ours `041e776` 2026-05-03 18:36 / `c60219c` 2026-05-04 14:51,
+origin's `4cf5e83` / `06b2379` 2026-05-03 18:42). Merged in an isolated worktree so the
+owner's 54 uncommitted files were never touched, resolving 3 hunk-level conflicts:
+
+- `README.md` -> ours (the plain-language rewrite; origin only trimmed 12 lines of the old one).
+- `site/src/app/beta/page.tsx`, `site/src/components/home/beta-teaser.tsx` -> origin's wording
+  (origin's 18:42 is 6 minutes newer than ours).
+- Our branch's deletion of `site/src/components/beta/*` stands: `c60219c` (05-04 14:51) is the
+  newest decision of the four, and `beta/page.tsx` imports none of those modules, so the tree
+  stays coherent.
+
+Pushed as `2a1bffa`; the remote reported the repository moved, and `origin` was repointed to
+`https://github.com/gjones01/NullCS.git` (it was still `NullCS.ai.git`). The local branch and
+index were moved to `2a1bffa` with `update-ref` + `reset --mixed` (no file writes), leaving all
+54 WIP files in place and unstaged.
 
