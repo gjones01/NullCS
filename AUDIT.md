@@ -219,3 +219,102 @@ Explicitly **out of scope**: changing labels, tick windows, encounter definition
 * **D3** - Is `--train-data local` (awpy branch) still required for research, or is CS2CD the only branch that must keep working? This decides whether `build_engagement_features.py` is consolidated with the CS2CD builder or merely frozen.
 * **D4** - May I delete `TEST_*`/`WEB_*`/`BENCH_*` demo dirs, `raw_uploads` duplicates, and the superseded `*_prune_*/_support_*/_reduce_*` report variants (after listing them for review)?
 * **D5** - Is GPU training ever going to be used? If not, the `--device cuda` plumbing stays but the environment should be documented as CPU-only.
+
+---
+
+## 8. Phase 1 execution log (2026-09-19)
+
+### Decisions recorded
+
+| ID | Answer | Verification performed |
+| --- | --- | --- |
+| D2 | Canonical model = `xgb_player_level_cs2cd`. The mtime-based "newest model" default is to be fixed. | **Confirmed live:** every inference run today logged `[INFO] selected model: xgb_player_level_cs2cd_ranksel_child5.json train_mode=cs2cd`. |
+| D3 | awpy retired; only CS2CD matters. Keep awpy code because it is still imported somewhere. | Verified the live path is awpy-free: `awpy` appears only in `scripts/infer_demo_from_path.py`, `src/parse/parse_demos_awpy_api.py`, `src/utils/visibility_awpy.py`, `src/features/build_engagement_features.py` (legacy), `src/utils/visibility_quickcheck.py`. Nothing in `run_infer_pipeline.py`, `encounter_nn.py`, `cs2cd_adapter.py`, `demoparser2_local.py`, `build_cs2cd_engagement_features.py` or `aggregate_player_features.py`. Nothing deleted - removal deferred to 2b/3. |
+| D4 | Yes - remove temp inference / CV-testing artifacts. | Executed with content-signature proof, see below. |
+| D5 | CUDA for training later (16 GB 5060 Ti); inference stays CPU-only. | Environment today: venv has `torch 2.11.0+cpu`, `torch.cuda.is_available() == False`. Keep `--device cuda` plumbing, document CPU-only reality. |
+| D1 | Not yet answered. Root-level experimental trees untouched. | - |
+
+### 1a - Checkpoint commit: DONE
+
+`4a36809` "research: checkpoint CS2CD + CNN pipeline before Phase 0 refactor" - 32 files (19 previously-untracked scripts, 8 modified research files, 4 docs incl. previously-untracked `PIPELINE.md`/`METHODOLOGY.md`/`RESULTS.md`/`AGENTS.md`, `AUDIT.md`, 2 dependency manifests).
+Excluded on purpose: UI/site/web edits, media assets, `.worktree-main/`/`.push-main/`/`.merge_main/` copies. `main/data/**` stays gitignored.
+`git status` for `main/src`, `main/scripts`, docs and manifests is now empty - RISK-0 closed.
+
+### 1b - Baseline freeze: DONE
+
+End-to-end validation on `CheaterDemos/Demo6.dem` (142 MB, smallest cheater demo) with a supported id:
+
+```
+python main/scripts/run_infer_pipeline.py --dem_path C:\NullCS\CheaterDemos\Demo6.dem \
+       --demo_id TEST_20260919_audit_smoke --out_dir C:\NullCS\main\data\processed     -> exit 0
+```
+
+wrote `engagement_features.parquet`, `encounters.parquet`, `encounter_nn_player_features.parquet`,
+`player_features_infer.parquet`, `ranked_players_infer.csv`, `debug_score_trace.json`, `infer_manifest.json`.
+
+Determinism baseline (two independent runs, `COMPARE` of `debug_score_trace.json`):
+
+* 4 players, identical player-id sets
+* model sha256 identical: `527dc49aea109487b34bd58807fa36b8a854babb0c970a42329853464c0acf68`
+* max |raw_proba difference| = `0.000e+00` (**bit-identical**)
+* model actually loaded: `xgb_player_level_cs2cd_ranksel_child5.json` (F2 confirmed on the live path)
+
+All validation artifacts were removed afterwards; demo dirs returned to 1239.
+
+### 3d - Dataset hygiene: DONE (measured)
+
+| Tree | Before | After | Reclaimed | Rule |
+| --- | --- | --- | --- | --- |
+| `main/data/raw_uploads` | 622 files / 196.56 GB | 15 files / 4.26 GB | **192.30 GB** | delete only files whose content signature (size + blake2b of first 4 MB) matched a `.dem` still present in `CheaterDemos`/`LegitDemos` (556 files), plus intra-`raw_uploads` duplicates keeping exactly one copy (51 files); kept 11 files that are the only copy of their content, plus 4 explicit keeps |
+| `main/data/processed/demos` | 1661 dirs / 0.46 GB | 1239 dirs / 0.26 GB | 422 dirs / 194.9 MB | temp-prefix caches: `RANKSEL_` 316, `TEST_` 93, `SMOKE_` 5, `WEB_` 3, `STYLECHK_` 3, `DET_` 2 |
+| `main/data/processed/reports` | 566 dirs / 1.50 GB | 473 dirs / 0.81 GB | 28 CSVs (667 MB) + 93 orphaned timestamped temp dirs (17.2 MB) | superseded `_prune_*/_support_*/_reduce_*` CV variant CSVs; timestamped temp report dirs with no matching demo dir |
+
+Total reclaimed: **~193.2 GB**.
+
+No delete was performed without proof of redundancy: the removed raw demos are byte-identical to `.dem`
+files that still exist in `CheaterDemos`/`LegitDemos`, and the removed demo caches are regenerable because
+the benchmark ids are deterministic (`BENCH_{BUCKET}_{stem}`, `RANKSEL_{VARIANT}_{BUCKET}_{stem}`).
+
+### Deliberately preserved (functionality > cleanliness)
+
+* `BENCH_*` processed demo dirs (120) - read by `generate_site_control_proof_plots.py` (`player_features_infer.parquet`), i.e. the published control-path proof plots. Deleting them would have required a 120-demo re-run first.
+* `CLI_SMOKE_BENCH_CHEATER_Demo1`, `README_PERF_20260503_122036`, `TEST_20260403_164759_d8269f6a`, `TEST_20260407_130853_1f420890` (+ their raw copies) - `generate_real_trailer_graphs.py` reads the two trailer demos; the CLI/README runs back published perf/README numbers.
+* `reports/encounter_nn_cs2cd_oof_encounters.csv` (357 MB) - referenced by `RESULTS.md` and by the NN trainer/scorer code.
+* Canonical artifacts re-verified present after cleanup: `models/xgb_player_level_cs2cd.json` + `_features.txt`, `models/encounter_nn_cs2cd.{pt,preproc.pkl,features.json}`, `player_features_cs2cd.parquet`, `encounter_nn_cs2cd_temporal_seq32.npz` (624 MB), `encounter_nn_cs2cd_player_features.parquet`, `ranked_player_demo_suspicion_oof_cs2cd.csv`, `ranked_demo_suspicion_oof_cs2cd.csv`, `top1_misses_cs2cd.csv`, `player_oof_predictions_cs2cd.csv`, `ranked_player_demo_suspicion_infer.csv`.
+
+### New findings discovered during Phase 1
+
+| # | Sev | Finding | Evidence |
+| --- | --- | --- | --- |
+| F27 | S1 | **`check_infer_determinism.py` can never pass.** It generates `DET_*` ids, but `encounter_nn._load_match_for_demo_id` supports only `CS2CD_*`, `CS2CD_PROLEGIT_*`, `TEST_*`, `BENCH_*` (plus `meta.json`-backed ids). The NN scoring is therefore skipped and `run_infer_pipeline._validate_inference_feature_frame` raises `RuntimeError: Model expects encounter neural-network features, but none were produced. Refusing to zero-fill stacked model signals.` (exit 1). Net effect: **the repo has no working determinism guard**; the baseline in 1b had to be produced manually with a `TEST_` id. Also proves the stacked model hard-requires encounter-NN features: any unsupported demo id can never be scored. | two captured runs, exit 1, full traceback |
+| F28 | S2/S3 | **The workspace path is an alias:** `C:\NullCS` is a directory **junction** to the real root `C:\ClarityCS` (`Get-Item` LinkType=Junction/Target=C:\ClarityCS; identical `fsutil file queryfileid`; `git -C C:\ClarityCS log` shows the same commits). `project_paths.find_repo_root` canonicalises through `Path.resolve()`, so `REPO_ROOT`/`PROCESSED_ROOT` always resolve to `C:\ClarityCS\...` even when invoked from `C:\NullCS`. This is **not** a split data tree - it is one live tree, so all audit measurements and the D4 cleanup apply to the live data. Side effects: (a) log lines print `C:\ClarityCS\...`; (b) the hardcoded `C:\ClarityCS\...` paths (F25) are the canonical root - they work here but break on any move/clone/CI checkout; (c) the pipeline mirrors uploads into `main/data/raw_uploads/<demo_id>/<demo_id>.dem`, which is how the 622-file duplication arose. | junction attributes, file IDs, traceback paths |
+| F29 | S3 | **UI job history is now partly dangling.** `main/ui/api/state/jobs.json` (untracked local UI state) holds 67 `TEST_*` entries whose processed demo dirs were removed by the D4 cleanup; only the 2 published-trailer `TEST_` demo dirs survive. Remedy if it matters: clear/repoint the in-app history, or re-run inference for those demos (ids are regenerable from `CheaterDemos`/`LegitDemos`). | grep of `jobs.json` + post-cleanup dir counts |
+| F30 | S3 | **330 orphaned per-demo evidence dirs remain under `reports/`** for the superseded rank-selection experiments (`RANKSEL_*_CHEATER_Demo*`, `RANKSEL_*_NORMAL_*`, `RANKSEL_*_PRO_*`, `SMOKE_*`, `STYLECHK_*`, `WEB_*`, `DET_20260227_*`, `TEST_20260227_SCOREAUDIT`). Their demo dirs are gone, so they cannot be re-derived without re-inference. Kept deliberately as the "list for review" remainder of D4 - they are small, but they are dead weight and a source of confusion when globbing `reports/`. | `reports/` listing |
+
+### Updated baseline (post-cleanup)
+
+| Measurement | Value |
+| --- | --- |
+| `raw_uploads` | 15 files / 4.26 GB (was 622 / 196.56 GB) |
+| `processed/demos` | 1239 dirs / 3784 files / 0.26 GB (was 1661 / 5049 / 0.46 GB) |
+| `processed/demos` composition | `CS2CD_` 895, `BENCH_` 120, `Normal*` 100, `Pro*` 100, `CDemo*` 20, `CLI_` 1, `README_` 1, `TEST_` 2 |
+| `processed/reports` | 473 dirs / 1490 files / 0.81 GB (was 566 / 2131 / 1.50 GB) |
+| `processed/models` | 39 files / 0.02 GB |
+| Canonical data artifacts | all present (verified individually) |
+| Live inference | exit 0 on `CheaterDemos/Demo6.dem`; bit-identical across two runs |
+| Model loaded by inference | `xgb_player_level_cs2cd_ranksel_child5.json` (contradicts D2, fix pending in 1c) |
+
+### Plan status after Phase 1
+
+| Phase | Status |
+| --- | --- |
+| 1a checkpoint commit | **done** (`4a36809`) |
+| 1b baseline freeze | **done** (determinism bit-identical, artifacts verified) |
+| 1c pin/lock the inference model artifact (F2) | next |
+| 2a dedupe identical helpers, 2b retire orphan `build_events_from_zips.py`, 2c lock the 449-feature list (F3) | pending |
+| 3a inference/serving aggregation parity (F4), 3b match-load caching (F6), 3c vectorise temporal build (F7) | pending |
+| 3d dataset hygiene | **done** (~193.2 GB reclaimed) |
+| 4a CS2CD orchestrator, 4b smoke tests + **fix the determinism guard (F27)**, 4c dependency honesty (F17/F20/F21/F26) | pending |
+| 5 docs rewrite (`PIPELINE.md`, `AGENTS.md`) | pending |
+
+Awaiting a go/no-go only for: **1c** (changes which model inference uses - requires confirmation that `xgb_player_level_cs2cd` is the intended production model, per D2) and **F30** (delete the 330 orphaned rank-selection report dirs).
