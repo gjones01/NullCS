@@ -505,7 +505,7 @@ silently scoring them 0.0. The light CLI remains encounter-free by design; use
 `NewAnubisTri/.venv` was explicitly kept: `run_pipeline.py` runs the pipeline through
 `newanubis_venv_python()`, so deleting it would break every entry point.
 
-Inventory recorded for owner decisions (not touched): `huggfacedata` 96.4 GB of which
+Owner decisions taken after this inventory (see 10.8): `huggfacedata` 96.4 GB of which
 **47.4 GB is the clone's own `.git`** (public HF dataset, so re-downloadable), 
 `huggfacedata` working tree 49.0 GB, `LegitDemos` 63.8 GB of source `.dem` files
 (already parsed into `parsed_zips/`, but not re-downloadable), `CheaterDemos` 10.6 GB
@@ -534,3 +534,30 @@ glossary, Q&A and open items.
    artifact and drops the deleted orphan script.
 
 ---
+### 10.8 Dataset clone history reclaimed (owner decision, executed)
+
+The owner chose the narrowest option: delete only the clone's own `.git`, keep the extracted dataset.
+
+| Item | Before | After |
+| --- | ---: | ---: |
+| `huggfacedata/.git` | 47.42 GB (827 files) | deleted |
+| `huggfacedata/no_cheater_present` | 956 files, 33.80 GB | unchanged |
+| `huggfacedata/with_cheater_present` | 634 files, 15.21 GB | unchanged |
+| `huggfacedata` total | 96.43 GB | **49.01 GB** |
+| C: free | 283.5 GB | **330.9 GB** |
+
+Integrity evidence: file counts and byte totals were identical before and after, and sample hashes
+matched - `no_cheater_present/0.parquet` `4B7886214B3CD9B6999A...`,
+`with_cheater_present/0.parquet` `B1DE844081C7F4C1447F...`. The folder now carries a
+`CLONE_NOTES.md` with the origin URL, the inventory and the re-clone command.
+
+Combined reclamation this pass: **56.29 GB** (8.87 GB build output + 47.42 GB clone history).
+Deliberately retained: `NewAnubisTri/.venv` (the pipeline interpreter), `CheaterDemos`
+(irreplaceable labels), `LegitDemos` (source `.dem`, not re-downloadable), `parsed_zips`
+(parsed tables), `tris` (map geometry).
+
+Provenance note: `AUDIT.md` was rewritten by an external process about a minute after commit
+`b8e221f`, corrupting one unrelated paragraph at line ~122 (wrapped mid-word, `Root-lev` / `el`).
+The file was restored from the commit and section 10 content was not affected. If that re-wrap
+reappears, it is not coming from the pipeline.
+
