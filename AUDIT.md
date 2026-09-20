@@ -310,11 +310,93 @@ the benchmark ids are deterministic (`BENCH_{BUCKET}_{stem}`, `RANKSEL_{VARIANT}
 | --- | --- |
 | 1a checkpoint commit | **done** (`4a36809`) |
 | 1b baseline freeze | **done** (determinism bit-identical, artifacts verified) |
-| 1c pin/lock the inference model artifact (F2) | next |
+| 1c pin/lock the inference model artifact (F2) | **done** - canonical `xgb_player_level_cs2cd` pinned, evidence in section 9 |
 | 2a dedupe identical helpers, 2b retire orphan `build_events_from_zips.py`, 2c lock the 449-feature list (F3) | pending |
 | 3a inference/serving aggregation parity (F4), 3b match-load caching (F6), 3c vectorise temporal build (F7) | pending |
 | 3d dataset hygiene | **done** (~193.2 GB reclaimed) |
 | 4a CS2CD orchestrator, 4b smoke tests + **fix the determinism guard (F27)**, 4c dependency honesty (F17/F20/F21/F26) | pending |
 | 5 docs rewrite (`PIPELINE.md`, `AGENTS.md`) | pending |
 
-Awaiting a go/no-go only for: **1c** (changes which model inference uses - requires confirmation that `xgb_player_level_cs2cd` is the intended production model, per D2) and **F30** (delete the 330 orphaned rank-selection report dirs).
+1c is complete (section 9): `xgb_player_level_cs2cd` is pinned as the inference artifact. Awaiting a go/no-go only for **F30** (delete the 330 orphaned rank-selection report dirs) and for promoting the `ranksel_depth4` lead described in section 9.6.
+
+---
+
+## 9. Phase 1c - inference model pin: evidence and artifact comparison (2026-09-19)
+
+Owner decision on D2 confirmed: keep **`xgb_player_level_cs2cd`**. The artifact mtime selection had been loading (`xgb_player_level_cs2cd_ranksel_child5`) is an unvalidated, uncalibrated experiment and is **not** better on any controlled metric.
+
+### 9.1 The fix (F2 closed)
+
+`src/utils/model_registry.py::resolve_model_artifacts` now resolves in this order:
+
+1. explicit `model_artifact=` argument - every CLI flag (`--model-artifact`) and env var (`NULLCS_MODEL_ARTIFACT`, `CLARITY_MODEL_ARTIFACT`) still wins;
+2. the pinned canonical artifact `xgb_player_level_cs2cd.json` (`DEFAULT_MODEL_STEM`);
+3. legacy newest-mtime `xgb_*.json` selection **only if** the canonical file is missing (so a renamed artifact cannot hard-fail inference).
+
+`NULLCS_DEFAULT_MODEL_STEM` / `CLARITY_DEFAULT_MODEL_STEM` can repoint the pin for experiments without a code edit. Verified resolution matrix: default -> `xgb_player_level_cs2cd.json`; explicit `..._ranksel_child5.json` -> still selectable; explicit `xgb_player_level_gridcv.json` -> unchanged; env override honoured; canonical-absent -> newest-mtime fallback; empty dir -> `FileNotFoundError`.
+
+Acceptance test (same invocation as the 1b baseline, `CheaterDemos/Demo6.dem`):
+
+| Evidence | Before (1b) | After |
+| --- | --- | --- |
+| Log line | `selected model: xgb_player_level_cs2cd_ranksel_child5.json` | `selected model: xgb_player_level_cs2cd.json train_mode=cs2cd` |
+| Exit code | 0 | 0 |
+| `infer_manifest.json` model sha256 | `527dc49aea109487...` | `f9016d95a144e1004f40c01f15b86879d9d9101cdda4659acaa261ac80610ea8` |
+| Calibration | `proba_calibrated` empty, `risk` = raw | `proba_cheater_infer 0.9609` -> `proba_calibrated = risk = 0.8164`, `risk_band=high_priority` |
+
+All smoke artifacts were removed afterwards: `processed/demos` back to 1239 dirs, `raw_uploads` 15 files, `processed/models` 39 files, and `xgb_player_level_cs2cd_eval_summary.json` byte-restored (`0DB855F0A6CFF205E65AA79328C09113E5D213DB470103E00F3E5F96EFBC3D69`).
+
+### 9.2 What the four `*_cs2cd*` artifacts actually are
+
+All four share a **byte-identical 449-feature contract** (`xgb_player_level_cs2cd_features.txt`; raw sha `26dfc6461569...` = CRLF, normalised `2ec454a76460...` = the value stored in the training manifests, so the two hashes seen in the wild are the same file). Differences are hyperparameters only:
+
+| Artifact | Bytes | sha256 (16) | Rounds | max_depth | min_child_weight | Trained | Calibrator | 40-demo cheater slice |
+| --- | ---: | --- | ---: | ---: | ---: | --- | --- | --- |
+| `xgb_player_level_cs2cd.json` (pinned) | 948,824 | `f9016d95a144e100` | 800 | 3 | 8 | 2026-03-29 15:03 | **yes** | top1 0.600 / top3 0.900 |
+| `..._ranksel_base.json` | 948,824 | `f9016d95a144e100` | 800 | 3 | 8 | 2026-03-31 19:17 | no | top1 0.425 / top3 0.800 |
+| `..._ranksel_depth4.json` | 1,431,592 | `a46b0c223fe9fd61` | 800 | 4 | 8 | 2026-03-31 20:04 | no | top1 0.575 / top3 0.875 |
+| `..._ranksel_child5.json` (was live) | 1,196,516 | `527dc49aea109487` | 1000 | 3 | 5 | 2026-03-31 20:51 | **no** | **never ran (aborted sweep)** |
+
+`xgb_player_level_cs2cd_ranksel_base.json` is a **byte-identical copy** of the canonical model (same sha256, max abs `predict_proba` difference = `0` over 600 rows), i.e. that arm of the rank-selection experiment was a no-op control.
+
+### 9.3 Controlled comparison - grouped 5-fold OOF on the frozen training table
+
+Command: `python main/scripts/evaluate_xgb_gridcv.py --train-data cs2cd --artifact-stem <stem> --xgb-jobs 4` on `player_features_cs2cd.parquet` (sha `de13fd65a7acf7a8...`, 6973 rows / 882 demos; after the `n_players>=8` filter 6886 rows / 860 demos, 992 pos / 5894 neg). Same features, same folds, same protocol for all four, so this is the only fully controlled comparison that includes `child5`. Copies in `processed/reports/_model_compare_20260919/`.
+
+| Artifact | PR-AUC | ROC-AUC | CDemo top1 | CDemo top3 | FP@0.50 non-cheater demos | ECE raw -> calibrated |
+| --- | ---: | ---: | ---: | ---: | ---: | --- |
+| `xgb_player_level_cs2cd` (pinned) | 0.7926 | 0.9557 | 0.9283 | 0.9659 | **84** | 0.0353 -> **0.0023** |
+| `..._ranksel_base` | 0.7926 | 0.9557 | 0.9283 | 0.9693 | 106 | 0.0353 -> 0.0353 (no calibrator) |
+| `..._ranksel_depth4` | 0.7898 | 0.9565 | 0.9181 | 0.9693 | 97 | 0.0306 -> 0.0306 |
+| `..._ranksel_child5` | 0.7941 | 0.9559 | 0.9283 | 0.9727 | 101 | 0.0305 -> 0.0305 |
+| *documented 8/19 canonical run* | *0.8051* | *0.9589* | *0.9283* | *0.9795* | *84* | *0.0358 -> 0.0043* |
+
+Reading: `child5` leads PR-AUC/top3 by `+0.0015` / `+0.0068` (noise-level) but flags ~20% more non-cheater demos at 0.50 and has no calibration; `depth4` is the only one with a higher ROC-AUC (`+0.0008`) while losing top1, PR-AUC and FP. No variant is *materially* better than the canonical model, and only the canonical model is calibrated and documented.
+
+### 9.4 Benchmark-slice evidence (rank of the known cheater, calibration-independent)
+
+Computed from the surviving per-demo `ranked_players_infer.csv` files, same 40 cheater demos, metric = rank of the labelled SteamID by `risk`:
+
+| Artifact | top1 | top3 | median rank | source |
+| --- | ---: | ---: | ---: | --- |
+| `xgb_player_level_cs2cd` | 0.600 | 0.900 | 1.0 | `BENCH_CHEATER_Demo1..40` |
+| `..._ranksel_depth4` | 0.575 | 0.875 | 1.0 | `RANKSEL_DEPTH4_CHEATER_Demo1..40` |
+| `..._ranksel_base` | 0.425 | 0.800 | 2.0 | `RANKSEL_BASE_CHEATER_Demo1..40` |
+| `..._ranksel_child5` | - | - | - | sweep aborted, no cheater bucket |
+
+Version-consistent batch only (`3/31 19:17-20:50`): `depth4` 0.575 > `base` 0.425. Non-cheater slices (`NORMAL`/`PRO`, 40 each) were clean for all three: 0 demos above 0.20 or 0.50.
+
+### 9.5 New findings from Phase 1c
+
+| # | Sev | Finding | Evidence |
+| --- | --- | --- | --- |
+| F31 | S2 | **Cross-sweep benchmark numbers are not comparable.** `..._ranksel_base.json` is byte-identical to the canonical model yet scored 0.425 vs 0.600 on the same 40 cheater demos, because the harness changed between sweeps (`score_benchmark_suite.py` mtime 3/31 10:48, i.e. after the canonical `BENCH_*` sweeps at 3/30 20:25-3/31 10:00 and before the ranksel sweeps at 19:17-21:17) and `BENCH_*` dirs are themselves a mix of 3/30 and 3/31 builds (`BENCH_CHEATER_Demo1` was refreshed at 3/31 21:54). Any promotion/rejection decision based on raw cross-sweep top1 deltas is confounded. | sha equality + max-proba diff 0; manifest mtimes; per-batch top1 recomputation |
+| F32 | S1 | **Only the canonical stem has a calibrator.** `load_calibrator` returns `None` unless `<stem>_calibration.pkl` exists, so each ranksel artifact served **uncalibrated** probabilities and `risk == raw`. Controlled effect on the same table: 84 -> 101/106 non-cheater demos at/above 0.50, ECE 0.0023 -> 0.0305/0.0353. Direct artifact evidence: `RANKSEL_*` rows have an empty `proba_calibrated`; `BENCH_*` rows carry a calibrated value. | `load_calibrator` code; eval summaries; `ranked_players_infer.csv` field dumps |
+| F33 | S2 | **The documented eval numbers are not reproducible.** Re-running the documented OOF protocol on the same frozen table with the unchanged script gives PR-AUC 0.7926 / ROC-AUC 0.9557 / top3 0.9659 vs documented 0.8051 / 0.9589 / 0.9795. Environment drifts (`xgboost 3.0.5`, `sklearn 1.7.1`, no version pins in the repo) while inference output itself stays bit-identical, so the sensitivity is in the fold-retraining path. Metrics need pinned dependencies plus a recorded environment stamp (Phase 4c). | two runs, identical script/table/params/seed |
+| F34 | S1 | **The live model had no cheater-slice validation.** The `child5` sweep (`reports/benchmark_suite_20260331_205104/`, started 20:51:04) aborted: the summary dir is empty, 76/120 per-demo dirs exist (40 `NORMAL` + 36 `PRO`) and the cheater bucket ran 0/40. Other aborted runs: `benchmark_suite_20260329_154251`, `20260330_202435`, `20260331_125724` (empty dirs). | directory listings; per-bucket counts |
+
+### 9.6 Next step
+
+1. Phase 1c is closed; continue the approved order: **2a/2b/2c** (helper de-duplication, retire `build_events_from_zips.py`, lock the 449-feature contract), then **3a-3c**, **4a-4c**, **5**.
+2. Pending owner calls: **F30** (delete the 330 orphaned rank-selection report dirs - they are now the raw material for F31/F32 analysis, so keep them until 9.6.3 is decided) and whether to open the `depth4` research lead.
+3. Optional research lead, do **not** change the default for it: re-benchmark all four artifacts in **one** harness version on **one** feature build (a single controlled 40-demo sweep), because the existing evidence is harness-confounded (F31) and `child5` was never measured. Only a clean sweep may justify replacing the pinned artifact.
