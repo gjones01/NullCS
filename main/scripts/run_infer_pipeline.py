@@ -8,6 +8,7 @@ import shutil
 import sys
 from pathlib import Path
 import os
+from importlib import metadata
 
 import numpy as np
 import pandas as pd
@@ -266,6 +267,84 @@ def _build_demo_feature_frames_demoparser2(demo_file: Path, demo_id: str) -> tup
     return kill_df, encounter_df
 
 
+def _package_version(name: str) -> str | None:
+    try:
+        return metadata.version(name)
+    except metadata.PackageNotFoundError:
+        return None
+
+
+def _series_max(df: pd.DataFrame, col: str) -> float:
+    if col not in df.columns:
+        return 0.0
+    s = pd.to_numeric(df[col], errors="coerce")
+    if s.dropna().empty:
+        return 0.0
+    return float(s.max(skipna=True))
+
+
+def _validate_inference_feature_frame(player_df: pd.DataFrame, feature_cols: list[str]) -> dict[str, object]:
+    if player_df.empty:
+        raise RuntimeError("No player feature rows were produced; refusing to score an empty demo")
+
+    original_cols = set(player_df.columns)
+    missing_feature_cols = sorted(c for c in feature_cols if c not in original_cols)
+    missing_ratio = len(missing_feature_cols) / max(1, len(feature_cols))
+
+    support_cols = ["n_kills", "n_kills_with_rt", "rt_n", "rounds_played", "n_players"]
+    missing_support = [c for c in support_cols if c not in original_cols]
+    if missing_support:
+        raise RuntimeError(f"Missing required inference support columns {missing_support}; parser/aggregation output is incomplete")
+
+    if _series_max(player_df, "n_kills") <= 0 or _series_max(player_df, "rt_n") <= 0:
+        raise RuntimeError("Parsed demo has no usable kill/reaction-time evidence; refusing to score")
+
+    expects_encounter = any(c == "enc_n" or c.startswith("enc_") for c in feature_cols)
+    if expects_encounter and ("enc_n" not in original_cols or _series_max(player_df, "enc_n") <= 0):
+        raise RuntimeError(
+            "Model expects encounter features, but no encounter rows were aggregated. "
+            "This usually means parser output changed or visibility/aim feature extraction failed."
+        )
+
+    expects_encounter_nn = any(c.startswith("enn_") for c in feature_cols)
+    if expects_encounter_nn:
+        present_enn = [c for c in feature_cols if c.startswith("enn_") and c in original_cols]
+        has_enn_signal = bool(present_enn) and any(_series_max(player_df, c) > 0 for c in present_enn)
+        if not has_enn_signal:
+            raise RuntimeError(
+                "Model expects encounter neural-network features, but none were produced. "
+                "Refusing to zero-fill stacked model signals."
+            )
+
+    if missing_ratio > 0.15:
+        raise RuntimeError(
+            f"Feature frame is missing {len(missing_feature_cols)}/{len(feature_cols)} model columns "
+            f"({missing_ratio:.1%}); refusing to score with likely schema drift"
+        )
+
+    numeric = player_df[[c for c in feature_cols if c in player_df.columns]].apply(pd.to_numeric, errors="coerce")
+    total_values = max(1, int(numeric.shape[0] * numeric.shape[1]))
+    nan_ratio = float(numeric.isna().sum().sum() / total_values) if total_values else 0.0
+    if nan_ratio > 0.80:
+        raise RuntimeError(f"Model feature matrix is {nan_ratio:.1%} NaN before imputation; refusing to score")
+
+    return {
+        "feature_count": len(feature_cols),
+        "missing_feature_count": len(missing_feature_cols),
+        "missing_feature_ratio": missing_ratio,
+        "missing_feature_sample": missing_feature_cols[:25],
+        "pre_imputation_nan_ratio": nan_ratio,
+        "expects_encounter_features": expects_encounter,
+        "max_enc_n": _series_max(player_df, "enc_n"),
+        "expects_encounter_nn_features": expects_encounter_nn,
+        "max_rt_n": _series_max(player_df, "rt_n"),
+        "max_n_kills": _series_max(player_df, "n_kills"),
+        "demoparser2_version": _package_version("demoparser2"),
+        "xgboost_version": _package_version("xgboost"),
+        "pandas_version": _package_version("pandas"),
+    }
+
+
 def _infer_scores(
     player_df: pd.DataFrame,
     processed_root: Path,
@@ -282,6 +361,7 @@ def _infer_scores(
 
     feature_cols = [x for x in feats_path.read_text(encoding="utf-8").splitlines() if x.strip()]
     ensure_no_forbidden_features(feature_cols, str(feats_path))
+    feature_diagnostics = _validate_inference_feature_frame(player_df, feature_cols)
     for c in feature_cols:
         if c not in player_df.columns:
             player_df[c] = np.nan
@@ -409,6 +489,7 @@ def _infer_scores(
         ),
         "calibration_used": bool(calibrator is not None),
         "ci_method": "not computed in current inference path",
+        "feature_diagnostics": feature_diagnostics,
         "players": trace_players,
     }
 
@@ -487,6 +568,7 @@ def main() -> int:
         "demo_file": str(demo_file),
         "zip_path": "",
         "parser_mode": parser_mode,
+        "demoparser2_version": _package_version("demoparser2"),
         "parse_warning": parse_warning,
         "engagement_features": str(eng_path),
         "encounters": str(encounter_path),

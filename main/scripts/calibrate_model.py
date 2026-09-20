@@ -3,56 +3,57 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
+import sys
 
 import numpy as np
 import pandas as pd
 from joblib import dump
 from sklearn.isotonic import IsotonicRegression
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import brier_score_loss, log_loss, roc_auc_score, average_precision_score
+from sklearn.metrics import average_precision_score, brier_score_loss, log_loss, roc_auc_score
 
 
-REPORTS_DIR = Path(r"C:\NullCS\main\data\processed\reports")
-MODELS_DIR = Path(r"C:\NullCS\main\data\processed\models")
-MODELS_DIR.mkdir(parents=True, exist_ok=True)
+PROJECT_ROOT = Path(__file__).resolve().parents[1]  # .../main
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
-OOF_CSV = REPORTS_DIR / "player_oof_predictions.csv"
-OOF_PARQUET = REPORTS_DIR / "player_oof_predictions.parquet"
-CALIBRATOR_OUT = MODELS_DIR / "calibration_isotonic.pkl"
-SUMMARY_OUT = MODELS_DIR / "calibration_summary.json"
-CURVE_OUT = MODELS_DIR / "calibration_curve.csv"
+from src.utils.project_paths import PROCESSED_ROOT
+from src.utils.training_mode import model_artifact_paths, report_artifact_paths, resolve_train_data_mode
+
+
+MODELS_ROOT = PROCESSED_ROOT / "models"
+REPORTS_ROOT = PROCESSED_ROOT / "reports"
 
 
 def parse_args() -> argparse.Namespace:
     ap = argparse.ArgumentParser(description="Fit probability calibrator from OOF-only predictions.")
-    ap.add_argument("--bins", type=int, default=12, help="Number of bins for reliability curve.")
-    ap.add_argument("--min-isotonic-positives", type=int, default=25, help="Fallback to sigmoid if positives below this.")
+    ap.add_argument("--train-data", default=None, help="Training data mode: local, cs2cd, or merged.")
+    ap.add_argument("--bins", type=int, default=12)
+    ap.add_argument("--min-isotonic-positives", type=int, default=25)
     return ap.parse_args()
 
 
-def load_oof() -> pd.DataFrame:
-    if OOF_PARQUET.exists():
-        return pd.read_parquet(OOF_PARQUET)
-    if OOF_CSV.exists():
-        return pd.read_csv(OOF_CSV)
-    raise FileNotFoundError(f"Missing OOF predictions file. Expected {OOF_PARQUET} or {OOF_CSV}.")
+def load_oof(csv_path: Path, parquet_path: Path) -> pd.DataFrame:
+    if parquet_path.exists():
+        return pd.read_parquet(parquet_path)
+    if csv_path.exists():
+        return pd.read_csv(csv_path)
+    raise FileNotFoundError(f"Missing OOF predictions file. Expected {parquet_path} or {csv_path}.")
 
 
 def binned_curve(y: np.ndarray, p_raw: np.ndarray, p_cal: np.ndarray, bins: int) -> pd.DataFrame:
     q = pd.qcut(p_raw, q=bins, duplicates="drop")
     df = pd.DataFrame({"y_true": y, "proba_raw": p_raw, "proba_cal": p_cal, "bin": q})
-    g = df.groupby("bin", dropna=True)
     rows = []
-    for idx, d in enumerate(g, start=1):
-        b, x = d
+    for idx, (bin_name, chunk) in enumerate(df.groupby("bin", dropna=True), start=1):
         rows.append(
             {
                 "bin_id": idx,
-                "bin": str(b),
-                "n": int(len(x)),
-                "mean_pred_raw": float(x["proba_raw"].mean()),
-                "mean_pred_calibrated": float(x["proba_cal"].mean()),
-                "empirical_pos_rate": float(x["y_true"].mean()),
+                "bin": str(bin_name),
+                "n": int(len(chunk)),
+                "mean_pred_raw": float(chunk["proba_raw"].mean()),
+                "mean_pred_calibrated": float(chunk["proba_cal"].mean()),
+                "empirical_pos_rate": float(chunk["y_true"].mean()),
             }
         )
     return pd.DataFrame(rows)
@@ -60,12 +61,17 @@ def binned_curve(y: np.ndarray, p_raw: np.ndarray, p_cal: np.ndarray, bins: int)
 
 def main() -> int:
     args = parse_args()
-    df = load_oof()
-    if "y_true" not in df.columns or "proba_raw_oof" not in df.columns:
-        raise ValueError("OOF file must contain y_true and proba_raw_oof columns.")
+    train_mode = resolve_train_data_mode(args.train_data)
+    artifact_paths = model_artifact_paths(MODELS_ROOT, train_mode)
+    report_paths = report_artifact_paths(REPORTS_ROOT, train_mode)
+
+    df = load_oof(report_paths["player_oof_csv"], report_paths["player_oof_parquet"])
+    raw_col = "proba_raw_oof" if "proba_raw_oof" in df.columns else "proba_cheater_oof"
+    if "y_true" not in df.columns or raw_col not in df.columns:
+        raise ValueError(f"OOF file must contain y_true and {raw_col} columns.")
 
     y = df["y_true"].astype(int).to_numpy()
-    p_raw = np.clip(df["proba_raw_oof"].astype(float).to_numpy(), 1e-6, 1.0 - 1e-6)
+    p_raw = np.clip(df[raw_col].astype(float).to_numpy(), 1e-6, 1.0 - 1e-6)
 
     n = len(y)
     n_pos = int((y == 1).sum())
@@ -78,20 +84,21 @@ def main() -> int:
         method = "sigmoid"
 
     if method == "isotonic":
-        cal = IsotonicRegression(out_of_bounds="clip")
-        cal.fit(p_raw, y)
-        payload = {"method": "isotonic", "model": cal}
-        p_cal = np.clip(cal.predict(p_raw), 0.0, 1.0)
+        model = IsotonicRegression(out_of_bounds="clip")
+        model.fit(p_raw, y)
+        payload = {"method": "isotonic", "model": model}
+        p_cal = np.clip(model.predict(p_raw), 0.0, 1.0)
     else:
-        lr = LogisticRegression(solver="lbfgs", max_iter=2000)
-        lr.fit(p_raw.reshape(-1, 1), y)
-        payload = {"method": "sigmoid", "model": lr}
-        p_cal = np.clip(lr.predict_proba(p_raw.reshape(-1, 1))[:, 1], 0.0, 1.0)
+        model = LogisticRegression(solver="lbfgs", max_iter=2000)
+        model.fit(p_raw.reshape(-1, 1), y)
+        payload = {"method": "sigmoid", "model": model}
+        p_cal = np.clip(model.predict_proba(p_raw.reshape(-1, 1))[:, 1], 0.0, 1.0)
 
-    dump(payload, CALIBRATOR_OUT)
-    print(f"[OK] wrote calibrator: {CALIBRATOR_OUT}")
+    dump(payload, artifact_paths["calibrator"])
+    print(f"[OK] wrote calibrator: {artifact_paths['calibrator']}")
 
     summary = {
+        "train_data_mode": train_mode,
         "n_rows": int(n),
         "n_pos": int(n_pos),
         "n_neg": int(n_neg),
@@ -105,18 +112,12 @@ def main() -> int:
         "raw_pr_auc": float(average_precision_score(y, p_raw)),
         "calibrated_pr_auc": float(average_precision_score(y, p_cal)),
     }
-    SUMMARY_OUT.write_text(json.dumps(summary, indent=2), encoding="utf-8")
-    print(f"[OK] wrote summary: {SUMMARY_OUT}")
+    artifact_paths["calibration_summary"].write_text(json.dumps(summary, indent=2), encoding="utf-8")
+    print(f"[OK] wrote summary: {artifact_paths['calibration_summary']}")
 
     curve = binned_curve(y, p_raw, p_cal, bins=max(4, int(args.bins)))
-    curve.to_csv(CURVE_OUT, index=False)
-    print(f"[OK] wrote calibration curve: {CURVE_OUT}")
-
-    print(
-        "[CAL] method={} raw_brier={:.5f} cal_brier={:.5f}".format(
-            summary["method"], summary["raw_brier"], summary["calibrated_brier"]
-        )
-    )
+    curve.to_csv(artifact_paths["calibration_curve"], index=False)
+    print(f"[OK] wrote calibration curve: {artifact_paths['calibration_curve']}")
     return 0
 
 

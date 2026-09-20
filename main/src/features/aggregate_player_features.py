@@ -3,7 +3,6 @@ from __future__ import annotations
 from pathlib import Path
 import argparse
 import json
-import re
 import math
 import sys
 import numpy as np
@@ -15,6 +14,9 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.utils.project_paths import DEMOS_ROOT, PROCESSED_ROOT
+from src.utils.console import safe_print
+# Shared verbatim with src/utils/demo_labels.py (AUDIT.md F10).
+from src.utils.demo_labels import _split_steamids, ensure_columns_pl
 from src.utils.training_mode import player_features_path, player_features_summary_path, resolve_train_data_mode, source_of_demo_id
 from src.models.encounter_nn import encounter_player_feature_path
 
@@ -90,19 +92,6 @@ def parse_args() -> argparse.Namespace:
         help="Training data mode: local, cs2cd, or merged. Default resolves from env or merged.",
     )
     return ap.parse_args()
-
-
-def safe_print(text: str) -> None:
-    try:
-        print(text)
-    except UnicodeEncodeError:
-        print(text.encode("ascii", errors="replace").decode("ascii"))
-
-
-def _split_steamids(raw: str) -> list[str]:
-    # Support multiple IDs in one cell, e.g. "id1;id2|id3 id4".
-    parts = re.split(r"[;,|\s]+", str(raw).strip())
-    return [p.strip() for p in parts if p and p.strip()]
 
 
 def load_cheater_map(csv_path: Path) -> dict[str, set[str]]:
@@ -315,15 +304,6 @@ def label_demo_frame_pl(
     if "map_name" not in out.columns:
         out = out.with_columns(pl.lit("").alias("map_name"))
     return out
-
-
-def ensure_columns_pl(df: pl.DataFrame, defaults: list[tuple[str, object]]) -> pl.DataFrame:
-    exprs: list[pl.Expr] = []
-    for col, default in defaults:
-        if col in df.columns:
-            continue
-        exprs.append(pl.lit(default).alias(col))
-    return df.with_columns(exprs) if exprs else df
 
 
 def _list_to_bools(values: object) -> list[bool]:

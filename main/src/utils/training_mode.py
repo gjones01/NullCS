@@ -58,6 +58,34 @@ def model_artifact_paths_for_stem(models_root: Path, stem: str) -> dict[str, Pat
     }
 
 
+def default_feature_list_path(models_root: Path, mode: str, artifact_stem: str | None = None) -> Path | None:
+    """Feature-list contract that training/evaluation lock onto by default.
+
+    Resolution order: the **mode contract** file first (for CS2CD that is
+    ``xgb_player_level_cs2cd_features.txt``, the 449-feature list), otherwise the
+    explicit ``artifact_stem`` feature file. Returns ``None`` when neither
+    exists, which keeps the legacy auto-select behaviour for modes that never
+    published a list.
+
+    The mode contract deliberately outranks a stem-local list: a stem file can be
+    a byproduct of an earlier unlocked run (verified: an unlocked run wrote a
+    463-feature ``<stem>_features.txt`` that then silently replaced the 449
+    contract). Experiments that intentionally train a different feature set must
+    pass ``--feature-list-path`` explicitly, which is recorded in the manifest.
+
+    Guards AUDIT.md finding F3: without this, training silently selected every
+    numeric column and changed the feature contract.
+    """
+    candidates: list[Path] = [model_artifact_paths(models_root, mode)["features"]]
+    stem = str(artifact_stem or "").strip()
+    if stem:
+        candidates.append(models_root / f"{stem}_features.txt")
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
+    return None
+
+
 def report_artifact_paths(reports_root: Path, mode: str) -> dict[str, Path]:
     normalized = normalize_train_data_mode(mode)
     suffix = "" if normalized == "merged" else f"_{normalized}"

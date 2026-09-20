@@ -1,6 +1,21 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
+
+
+# Canonical inference artifact (owner decision D2, AUDIT.md "Decision answers").
+# Inference must load this stem unless an explicit artifact is requested via
+# resolve_model_artifacts(model_artifact=...), NULLCS_MODEL_ARTIFACT or
+# CLARITY_MODEL_ARTIFACT. Override the pinned stem itself with
+# NULLCS_DEFAULT_MODEL_STEM / CLARITY_DEFAULT_MODEL_STEM when running experiments.
+DEFAULT_MODEL_STEM = "xgb_player_level_cs2cd"
+
+
+def default_model_stem() -> str:
+    override = os.environ.get("NULLCS_DEFAULT_MODEL_STEM") or os.environ.get("CLARITY_DEFAULT_MODEL_STEM")
+    stem = str(override or "").strip()
+    return stem or DEFAULT_MODEL_STEM
 
 
 def _candidate_models(models_dir: Path) -> list[Path]:
@@ -23,10 +38,17 @@ def resolve_model_artifacts(models_dir: Path, model_artifact: str | None = None)
         if not model_path.is_absolute():
             model_path = models_dir / model_path
     else:
-        candidates = _candidate_models(models_dir)
-        if not candidates:
-            raise FileNotFoundError(f"No model artifacts found in {models_dir}")
-        model_path = candidates[0]
+        pinned = models_dir / f"{default_model_stem()}.json"
+        if pinned.exists():
+            model_path = pinned
+        else:
+            # Fallback only: newest-mtime selection is a legacy behaviour kept so
+            # an explicitly renamed/removed canonical artifact cannot hard-fail
+            # inference. Experiments must pin their artifact explicitly.
+            candidates = _candidate_models(models_dir)
+            if not candidates:
+                raise FileNotFoundError(f"No model artifacts found in {models_dir}")
+            model_path = candidates[0]
 
     if not model_path.exists():
         raise FileNotFoundError(f"Model artifact not found: {model_path}")

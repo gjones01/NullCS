@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import matplotlib.pyplot as plt
@@ -8,6 +9,20 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parents[2]
 OUT_DIR = ROOT / "docs" / "assets" / "plots"
+REPORTS_ROOT = ROOT / "main" / "data" / "processed" / "reports"
+
+
+def latest_benchmark_summary() -> dict:
+    suites = sorted(
+        [path for path in REPORTS_ROOT.glob("benchmark_suite_*") if (path / "benchmark_suite_summary.json").is_file()],
+        key=lambda path: path.stat().st_mtime,
+        reverse=True,
+    )
+    if not suites:
+        raise FileNotFoundError("No benchmark suite summary found.")
+    summary_path = suites[0] / "benchmark_suite_summary.json"
+    print(f"[INFO] using benchmark summary: {summary_path}")
+    return json.loads(summary_path.read_text(encoding="utf-8"))
 
 
 def _style() -> None:
@@ -38,10 +53,19 @@ def _ensure_out() -> None:
     OUT_DIR.mkdir(parents=True, exist_ok=True)
 
 
-def build_benchmark_slice_plot() -> None:
+def build_benchmark_slice_plot(summary: dict) -> None:
+    bucket_summary = summary["bucket_summary"]
     categories = ["Suspicious\nbenchmark", "Normal\nlegit", "Pro\nstress-test"]
-    median = np.array([0.748, 0.0073, 0.0073])
-    mean = np.array([0.654, 0.0093, 0.0074])
+    median = np.array([
+        bucket_summary["cheater"]["median_top1_score"],
+        bucket_summary["normal"]["median_top1_score"],
+        bucket_summary["pro"]["median_top1_score"],
+    ])
+    mean = np.array([
+        bucket_summary["cheater"]["mean_top1_score"],
+        bucket_summary["normal"]["mean_top1_score"],
+        bucket_summary["pro"]["mean_top1_score"],
+    ])
     x = np.arange(len(categories))
     width = 0.28
     colors = {"median": "#91f2a7", "mean": "#8fb7ff"}
@@ -59,8 +83,8 @@ def build_benchmark_slice_plot() -> None:
         ax.spines["right"].set_visible(False)
         ax.set_axisbelow(True)
 
-    ax_main.set_ylim(0, 0.82)
-    ax_zoom.set_ylim(0, 0.012)
+    ax_main.set_ylim(0, max(0.08, float(max(median.max(), mean.max())) * 1.28))
+    ax_zoom.set_ylim(0, max(0.006, float(max(median[1:].max(), mean[1:].max())) * 1.6))
     ax_main.set_ylabel("Signal")
     ax_zoom.set_ylabel("Signal")
 
@@ -102,13 +126,13 @@ def build_benchmark_slice_plot() -> None:
     )
 
     for idx, val in enumerate(median):
-        if val > 0.05:
+        if val > 0.012:
             ax_main.text(idx - width / 2, val + 0.018, f"{val:.3f}", ha="center", va="bottom", fontsize=11, color="#dff7e5")
         else:
             ax_zoom.text(idx - width / 2, val + 0.00035, f"{val:.4f}", ha="center", va="bottom", fontsize=10, color="#dff7e5")
 
     for idx, val in enumerate(mean):
-        if val > 0.05:
+        if val > 0.012:
             ax_main.text(idx + width / 2, val + 0.018, f"{val:.3f}", ha="center", va="bottom", fontsize=11, color="#dce7ff")
         else:
             ax_zoom.text(idx + width / 2, val + 0.00035, f"{val:.4f}", ha="center", va="bottom", fontsize=10, color="#dce7ff")
@@ -128,9 +152,10 @@ def build_benchmark_slice_plot() -> None:
     plt.close(fig)
 
 
-def build_retrieval_plot() -> None:
+def build_retrieval_plot(summary: dict) -> None:
     labels = ["Top-1\nretrieval", "Top-3\nretrieval"]
-    values = np.array([0.60, 0.90])
+    cheater = summary["bucket_summary"]["cheater"]
+    values = np.array([cheater["top1_hit_rate"], cheater["top3_hit_rate"]])
     colors = ["#f4be74", "#91f2a7"]
 
     fig, ax = plt.subplots(figsize=(9, 6), dpi=160)
@@ -187,8 +212,9 @@ def build_retrieval_plot() -> None:
 def main() -> None:
     _ensure_out()
     _style()
-    build_benchmark_slice_plot()
-    build_retrieval_plot()
+    summary = latest_benchmark_summary()
+    build_benchmark_slice_plot(summary)
+    build_retrieval_plot(summary)
 
 
 if __name__ == "__main__":

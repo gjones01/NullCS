@@ -66,7 +66,6 @@ MODELS_ROOT = PROCESSED_ROOT / "models"
 DEMOS_ROOT = PROCESSED_ROOT / "demos"
 PARSE_ZIPS_ROOT = PROCESSED_ROOT / "parse_zips"
 PARSED_ZIPS_ROOT = REPO_ROOT / "parsed_zips"
-PROCESSED_DEMOS_ROOT = REPO_ROOT / "processed" / "demos"
 RAW_UPLOADS_ROOT = Path(os.getenv("NULLCS_UPLOAD_DIR", "").strip() or os.getenv("CLARITY_RAW_UPLOADS_DIR", "").strip() or str(MAIN_ROOT / "data" / "raw_uploads"))
 HUGGFACE_DATA_ROOT = REPO_ROOT / "huggfacedata"
 CHEATER_DEMOS_ROOT = REPO_ROOT / "CheaterDemos"
