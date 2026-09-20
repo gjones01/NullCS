@@ -634,3 +634,23 @@ Pushed as `2a1bffa`; the remote reported the repository moved, and `origin` was 
 index were moved to `2a1bffa` with `update-ref` + `reset --mixed` (no file writes), leaving all
 54 WIP files in place and unstaged.
 
+### 11.5 Layering the remediation onto `main` (2026-09-19)
+
+`origin` was repointed to `github.com/gjones01/NullCS.git`, where `main` turned out to be a **3-commit squashed public snapshot with no common ancestor** with this branch:
+
+| | this branch | `origin/main` |
+| --- | --- | --- |
+| commits / files | 41 / 270 | 3 / 235 (no merge base) |
+| pipeline code | remediated | pre-remediation: hardcoded `C:\NullCS` in 2 scripts, the 125-line trainer, no `DEFAULT_MODEL_STEM` (F2 live), duplicated `safe_print`/`_split_steamids`, stale `PROCESSED_DEMOS_ROOT` |
+| site + desktop UI | 05-03/04 | **05-26/05-31**: `review-pipeline.tsx`, app `alpha.2` / `app.nullcs.desktop` |
+| public scope | `docs/*.md`, dev/analytics scripts, `AUDIT.md`, `AGENTS.md` | trimmed away |
+
+Neither direction is simply newer-wins, so neither obvious move was safe. A force-push would have regressed the published desktop app to `alpha.1`/`app.nullcs.desktopalpha`, deleted `review-pipeline.tsx`, and resurrected 25 paths that `main` had already dropped. The merge was worse: with no merge base git cannot see deletions on either side, so `--allow-unrelated-histories` turns them into a **union** (restoring `docs/*.md`, the orphan `build_events_from_zips.py` and 17 trimmed scripts) on top of **37 add/add conflicts**.
+
+The commit was therefore built explicitly, path by path: the newer UI and lean public scope of `main` were kept byte-for-byte (17 paths), the remediation was taken for 21 paths plus 4 new ones, and the orphan was deleted. One file needed a real 3-way merge - `prepare-desktop-backend.ps1` carried the committed `Remove-Packaging-Only-Files` from `main` (this branch still carried it only as WIP) *and* our F36 fix, so both were kept. `PIPELINE.md` on main dropped the `infer_demo_from_path.py` line, because that script is not in the public scope of `main`.
+
+Result: `acfb047`, parent `4d34661`, pushed as a **fast-forward**, so the three original commits of `main` survive (238 files). Verified: every taken path byte-identical to this branch, all `main/**/*.py` compile, every `src.*` import resolves inside the tree, zero hardcoded `C:\NullCS`, `alpha.2` and `review-pipeline.tsx` intact, `AUDIT.md`/`AGENTS.md` absent, and all 8 argparse entry points return `--help` exit 0 from the merged tree.
+
+Incidental finding: `.gitignore` line 95 (`!main/ui/web/**`) un-ignores `__pycache__/` and `*.pyc` for the whole desktop tree, so bytecode under `main/ui/web/**` is **not** ignored - the first `compileall` run staged a `hook-xgboost.cpython-313.pyc` that had to be removed by hand.
+
+The local WIP of the owner already points the same way: `tauri.conf.json` in the working tree reads `alpha.3` (neither side has it) and `main/ui/site/src/components/home/review-pipeline.tsx` exists locally as an untracked file byte-identical to the blob in `main`.

@@ -278,3 +278,6 @@ python main/scripts/explain_demo.py --demo CDemo3 --name SomePlayerName
 6. The desktop bundle is **generated, gitignored, and stale by default**: `main/ui/web/src-tauri/resources/nullcs-backend` carries a compiled `nullcs-backend.exe`, so changing the model pin (or any backend code) does nothing for the desktop app until `main/ui/web/scripts/prepare-desktop-backend.ps1` is re-run. Verify with `AUDIT.md` section 11, not by reading the source tree.
 7. `prepare-desktop-backend.ps1` must not use `--collect-submodules xgboost`: importing `xgboost.testing` raises a pytest `Skipped` (a `BaseException`, so PyInstaller does not catch it) and aborts the build. Use the hook in `main/ui/web/scripts/pyinstaller-hooks/` via `--additional-hooks-dir` (F36).
 
+
+
+8. `main` on `github.com/gjones01/NullCS` is a **3-commit squashed public snapshot with no common ancestor** with the dev branch. It is newer than the branch for the site/desktop UI (`alpha.2`, `review-pipeline.tsx`) and older (pre-remediation) for the pipeline code, so never force-push a dev branch over it and never merge it with `--allow-unrelated-histories` (git cannot see deletions on either side, so it unions them and yields 37 add/add conflicts). Rebuild it as a layered commit instead: keep the newer UI and the lean public scope of `main`, then layer the remediation on top. See `AUDIT.md` section 11.5.
