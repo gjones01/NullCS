@@ -1,11 +1,19 @@
 from __future__ import annotations
 
-from pathlib import Path
 import pandas as pd
 
+import sys
+from pathlib import Path
 
-REPORTS_DIR = Path(r"C:\NullCS\main\data\processed\reports")
-PLAYER_FEATURES_PATH = Path(r"C:\NullCS\main\data\processed\player_features.parquet")
+MAIN_ROOT = Path(__file__).resolve().parents[1]
+if str(MAIN_ROOT) not in sys.path:
+    sys.path.insert(0, str(MAIN_ROOT))
+
+from src.utils.project_paths import PROCESSED_ROOT, REPORTS_ROOT
+
+
+REPORTS_DIR = REPORTS_ROOT
+PLAYER_FEATURES_PATH = PROCESSED_ROOT / "player_features.parquet"
 MISSES_PATH = REPORTS_DIR / "top1_misses.csv"
 RANKED_PATH = REPORTS_DIR / "ranked_player_demo_suspicion_oof.csv"
 OUT_DIR = REPORTS_DIR / "miss_analysis"

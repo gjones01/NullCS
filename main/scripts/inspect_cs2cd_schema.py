@@ -6,13 +6,20 @@ import random
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+import sys
 
 import pandas as pd
 
+MAIN_ROOT = Path(__file__).resolve().parents[1]
+if str(MAIN_ROOT) not in sys.path:
+    sys.path.insert(0, str(MAIN_ROOT))
 
-ROOT = Path(r"C:\NullCS\huggfacedata")
+from src.utils.project_paths import HUGGFACE_DATA_ROOT, REPORTS_ROOT
+
+
+ROOT = HUGGFACE_DATA_ROOT
 SPLITS = ("no_cheater_present", "with_cheater_present")
-REPORT_PATH = Path(r"C:\NullCS\main\data\processed\reports\cs2cd_schema_report.md")
+REPORT_PATH = REPORTS_ROOT / "cs2cd_schema_report.md"
 LABEL_TERMS = ("cheater", "is_cheater", "banned", "vac", "label", "target", "flag")
 
 
