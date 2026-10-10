@@ -59,7 +59,7 @@ The script runs Python/Rust/frontend dependency audits and backend/native regres
 
 6. Test a clean Windows machine without Python: install, startup, actual demo, report save, corrupt file, second instance, restart, and update from the previous version. Verify a tampered updater payload is rejected, TLS errors do not bypass validation, and model hashes match the published bundle. This is a release gate, not replaced by unit tests.
 7. Publish the verified installer, its `.sig`, and `latest.json` as public release assets. Preserve old releases for rollback investigation; the updater does not enable downgrades.
-8. Set Vercel's server-side `NULLCS_DESKTOP_DOWNLOAD_URL` to the exact verified GitHub installer asset URL and redeploy the website. The page only accepts HTTPS `.exe` release URLs under `gjones01/NullCS`. Until configured, it displays an unavailable download button, not a stale installer.
+8. After publishing and verifying the release asset, update `main/ui/site/src/lib/published-desktop-release.json` with its exact URL, version and checksum, then deploy the website. The optional server-side `NULLCS_DESKTOP_DOWNLOAD_URL` overrides that versioned public configuration; setting it to an empty string disables downloads. Both paths use the strict HTTPS `.exe` release-URL validator for `gjones01/NullCS`. Never record an unpublished asset as the default. Vercel's connector did not permit environment changes for this beta, so its verified public URL is versioned in source.
 
 ## Development and validation
 

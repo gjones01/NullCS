@@ -2,11 +2,12 @@ import type { Metadata } from "next";
 import { Download, ArrowUpRight } from "lucide-react";
 import Image from "next/image";
 import { desktopReleaseUrl } from "@/lib/desktop-release";
+import publishedRelease from "@/lib/published-desktop-release.json";
 
 export const metadata: Metadata = { title: "Download NullCS" };
 
 export default function AnalyzePage() {
-  const download = desktopReleaseUrl(process.env.NULLCS_DESKTOP_DOWNLOAD_URL);
+  const download = desktopReleaseUrl(process.env.NULLCS_DESKTOP_DOWNLOAD_URL ?? publishedRelease.downloadUrl);
   return (
     <div className="subpage">
       <div className="section-register">
