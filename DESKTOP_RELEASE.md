@@ -2,6 +2,10 @@
 
 **Community beta distribution (October 10, 2026):** this GPLv3 GitHub prerelease is unsigned. The site and release notes disclose the unknown-publisher status and manual updates. This community-beta path supersedes the earlier blanket hold on unsigned downloads; the fully signed release procedure remains available for future releases. Automatic updates stay disabled until signing keys/feed are configured; no verification bypass is permitted. Clean-machine certification remains unverified. LICENSE, NOTICE.md and collected third-party notices accompany the distribution.
 
+The release candidate is `NullCS_0.1.0-beta.1_x64-setup.exe`, **389,857,409 bytes**, SHA-256 `0f45bba38cd497f03e30c945b120a358ccfec6165c667c92d69950d94b3ac326`. It includes GPLv3 and third-party notices (593 dependency inventory records). All 61 backend manifest hashes passed; the final frozen engine processed the validation demo into ten ranked players in **37.27 seconds** on the developer workstation. Defender completed a targeted scan with no detection event observed during that scan. These checks do not establish clean-machine compatibility or eliminate all security risks.
+
+Release location: https://github.com/gjones01/NullCS/releases/tag/v0.1.0-beta.1. The installer contains the runtime/models; the separate model ZIP is for developers rebuilding the corresponding source tag. Verify assets against the release's `SHA256SUMS.txt`. Earlier dated entries below are historical validation records: their installer hashes, unpublished status and blanket signing gates are superseded by this explicitly unsigned beta policy. The signed-update procedure and unresolved parser, calibration, maintenance, build-tool and clean-machine limitations still apply.
+
 The active desktop entry point is `main/ui/web/src/DesktopApp.tsx`. It replaces the old multi-page UI at startup; the previous `App.tsx` and research explanation components remain in the repository but are not imported into the client bundle. `/analyze` on the Next.js site is now the Windows download page. No hosted inference server is required for this product path.
 
 ## Local workflow
