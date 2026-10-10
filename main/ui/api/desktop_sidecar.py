@@ -29,6 +29,10 @@ def _run_module_main(module_name: str, argv: list[str]) -> int:
 def _run_api(host: str, port: int) -> int:
     _bootstrap_paths()
     import uvicorn
+    if os.getenv("NULLCS_DESKTOP_PARENT_WATCHDOG") == "1":
+        import threading
+        from main.ui.api.pipeline_child import parent_watchdog
+        threading.Thread(target=parent_watchdog, daemon=True).start()
 
     uvicorn.run(
         "main.ui.api.main:app",
@@ -41,6 +45,30 @@ def _run_api(host: str, port: int) -> int:
 
 
 def main() -> int:
+    # Native launches need the packaged source root before importing the watchdog;
+    # their working directory is not necessarily the backend resource directory.
+    _bootstrap_paths()
+    if len(sys.argv) > 1 and sys.argv[1] == "check-runtime":
+        _bootstrap_paths()
+        import scipy._external.array_api_compat.numpy.fft
+        import xgboost
+        import torch
+        import demoparser2
+        from importlib.metadata import version
+        for package in ("demoparser2", "xgboost", "pandas"):
+            version(package)  # Reports must retain dependency provenance when frozen.
+        print("Packaged runtime imports passed", flush=True)
+        return 0
+    # Forward research CLI options unchanged. argparse REMAINDER does not accept
+    # a leading --dem_path without a separator, which broke the packaged route.
+    if len(sys.argv) > 1 and sys.argv[1] in {"run-infer", "explain"}:
+        mode, forwarded = sys.argv[1], sys.argv[2:]
+        if mode == "run-infer":
+            import threading
+            from main.ui.api.pipeline_child import parent_watchdog
+            threading.Thread(target=parent_watchdog, daemon=True).start()
+        module = "main.scripts.run_infer_pipeline" if mode == "run-infer" else "main.scripts.explain_demo"
+        return _run_module_main(module, forwarded)
     parser = argparse.ArgumentParser(description="NullCS packaged desktop backend sidecar.")
     sub = parser.add_subparsers(dest="mode", required=True)
 
@@ -58,6 +86,9 @@ def main() -> int:
     if args.mode == "api":
         return _run_api(args.host, args.port)
     if args.mode == "run-infer":
+        import threading
+        from main.ui.api.pipeline_child import parent_watchdog
+        threading.Thread(target=parent_watchdog, daemon=True).start()
         return _run_module_main("main.scripts.run_infer_pipeline", args.args)
     if args.mode == "explain":
         return _run_module_main("main.scripts.explain_demo", args.args)

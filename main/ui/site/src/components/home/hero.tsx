@@ -10,7 +10,7 @@ import { githubUrl, heroMetrics } from "@/lib/site-content";
 export function Hero() {
   return (
     <section className="relative overflow-hidden border-b border-white/8">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(180,74,33,0.2),transparent_26%),linear-gradient(180deg,rgba(5,7,12,0.1),rgba(5,7,12,0.9))]" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(36,115,210,0.2),transparent_26%),linear-gradient(180deg,rgba(5,7,12,0.1),rgba(5,7,12,0.9))]" />
       <div className="absolute inset-0 bg-grid bg-[size:72px_72px] opacity-[0.08]" />
       <div className="container relative grid gap-14 py-20 lg:grid-cols-[1.05fr_0.95fr] lg:items-end lg:py-28">
         <div className="max-w-2xl">
@@ -18,7 +18,7 @@ export function Hero() {
             <Chip>Machine Learning Research for CS2 Demo Review</Chip>
           </Reveal>
           <Reveal delay={0.06}>
-            <h1 className="mt-7 max-w-4xl font-display text-4xl tracking-[-0.065em] text-white sm:text-6xl lg:text-7xl">
+            <h1 className="mt-7 max-w-4xl metallic-text font-display text-4xl tracking-[-0.065em] text-white sm:text-6xl lg:text-7xl">
               Surface unusual CS2 demo behavior for review, not verdicts.
             </h1>
           </Reveal>
@@ -57,7 +57,7 @@ export function Hero() {
         <div className="relative">
           <div className="absolute -inset-3 rounded-[2rem] border border-white/10 bg-[linear-gradient(145deg,rgba(255,255,255,0.05),rgba(255,255,255,0.01))]" />
           <div className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-[#090b12] shadow-panel">
-            <div className="absolute inset-0 bg-[linear-gradient(130deg,rgba(189,76,35,0.22),transparent_45%,rgba(255,255,255,0.04))]" />
+            <div className="absolute inset-0 bg-[linear-gradient(130deg,rgba(42,139,240,0.22),transparent_45%,rgba(255,255,255,0.04))]" />
             <div className="absolute left-0 top-0 h-full w-px bg-white/10" />
             <div className="absolute right-[18%] top-0 h-full w-px bg-white/10" />
             <div className="relative aspect-[4/3] sm:aspect-[4/5]">
@@ -67,10 +67,10 @@ export function Hero() {
                   alt="Atmospheric Counter-Strike themed scene"
                   fill
                   priority
-                  className="object-cover object-center opacity-55"
+                  className="object-cover object-center opacity-55 grayscale"
                 />
               </ParallaxMedia>
-              <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(7,9,14,0.08),rgba(7,9,14,0.7))]" />
+              <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(24,109,186,0.25),rgba(7,9,14,0.85))]" />
               <div className="absolute bottom-0 left-0 right-0 p-6 sm:p-8">
                 <div className="rounded-[1.75rem] border border-white/10 bg-black/35 p-5 backdrop-blur-[2px] transition-transform duration-500 hover:-translate-y-1">
                   <div className="text-[0.7rem] uppercase tracking-[0.24em] text-zinc-400">Current direction</div>

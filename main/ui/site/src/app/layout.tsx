@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { PageViewTracker } from "@/components/analytics/pageview-tracker";
-import { BackgroundEffects } from "@/components/layout/background-effects";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
 import { Providers } from "@/components/providers";
 import { siteMetadata } from "@/lib/site-content";
 import "./globals.css";
+import "./cinematic.css";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
 
@@ -17,6 +17,7 @@ export const metadata: Metadata = {
     template: `%s | ${siteMetadata.title}`,
   },
   description: siteMetadata.description,
+  icons: { icon: "/favicon.svg" },
   openGraph: {
     title: siteMetadata.title,
     description: siteMetadata.description,
@@ -24,10 +25,10 @@ export const metadata: Metadata = {
     siteName: siteMetadata.title,
     images: [
       {
-        url: "/assets/hero-cs-bg.png",
-        width: 1600,
-        height: 900,
-        alt: "NullCS project atmosphere",
+        url: "/assets/observatory/social-preview.webp",
+        width: 1440,
+        height: 1000,
+        alt: "NullCS: Beyond the score. A precision optical instrument for behavioral research.",
       },
     ],
   },
@@ -35,7 +36,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: siteMetadata.title,
     description: siteMetadata.description,
-    images: ["/assets/hero-cs-bg.png"],
+    images: ["/assets/observatory/social-preview.webp"],
   },
 };
 
@@ -48,11 +49,38 @@ export default function RootLayout({
     <html lang="en" className="dark">
       <body>
         <Providers>
-          <div className="relative min-h-screen overflow-x-hidden">
-            <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top_right,rgba(217,122,74,0.14),transparent_22%),radial-gradient(circle_at_left,rgba(255,255,255,0.04),transparent_18%)]" />
-            <BackgroundEffects />
+          <div className="relative isolate min-h-screen overflow-x-clip">
             <SiteHeader />
-            <main>{children}</main>
+            <noscript>
+              <style>
+                {"#main-content{display:none}.menu-toggle{display:none}"}
+              </style>
+              <section className="subpage">
+                <p className="technical-label">NULLCS / STATIC OVERVIEW</p>
+                <h1>Beyond the score.</h1>
+                <p className="subpage-intro">
+                  NullCS is independent behavioral analysis research for
+                  Counter-Strike 2. Demo telemetry becomes encounter windows,
+                  temporal model outputs, and ranked players for human review.
+                  These are review signals, not cheating verdicts.
+                </p>
+                <p className="subpage-intro" style={{ marginTop: 24 }}>
+                  The Windows desktop application runs analysis locally and
+                  exports a readable report. Enable JavaScript for the
+                  interactive research presentation and configured website
+                  download, or visit the repository for documentation and
+                  published releases.
+                </p>
+                <a
+                  className="instrument-button"
+                  style={{ marginTop: 32 }}
+                  href="https://github.com/gjones01/NullCS"
+                >
+                  Project and release information ↗
+                </a>
+              </section>
+            </noscript>
+            <main id="main-content">{children}</main>
             <SiteFooter />
           </div>
           <Suspense fallback={null}>

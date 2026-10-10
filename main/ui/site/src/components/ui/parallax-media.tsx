@@ -11,10 +11,10 @@ export function ParallaxMedia({ children }: { children: React.ReactNode }) {
     offset: ["start end", "end start"],
   });
 
-  const y = useTransform(scrollYProgress, [0, 1], prefersReducedMotion ? [0, 0] : [14, -14]);
+  const y = useTransform(scrollYProgress, [0, 1], prefersReducedMotion ? [0, 0] : [28, -28]);
 
   return (
-    <motion.div ref={ref} className="relative h-full w-full" style={{ y }}>
+    <motion.div ref={ref} className="relative h-full w-full" style={{ y, scale: prefersReducedMotion ? 1 : 1.09 }}>
       {children}
     </motion.div>
   );

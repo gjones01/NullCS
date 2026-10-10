@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "NullCS",
-  "version": "0.1.0-alpha.2",
+  "version": "0.1.0-beta.1",
   "identifier": "app.nullcs.desktop",
   "build": {
     "frontendDist": "../dist",
@@ -13,12 +13,12 @@
     "windows": [
       {
         "title": "NullCS",
-        "width": 1600,
-        "height": 980,
-        "minWidth": 1280,
-        "minHeight": 820,
+        "width": 1360,
+        "height": 900,
+        "minWidth": 900,
+        "minHeight": 650,
         "resizable": true,
-        "maximized": true,
+        "maximized": false,
         "fullscreen": false
       }
     ],
@@ -37,7 +37,20 @@
       "icons/icon.ico"
     ],
     "resources": [
-      "resources/nullcs-backend"
-    ]
+      "resources/nullcs-backend",
+      "resources/legal"
+    ],
+    "windows": {
+      "nsis": {
+        "compression": "zlib"
+      }
+    }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "",
+      "endpoints": [],
+      "requireSignedVersion": true
+    }
   }
 }

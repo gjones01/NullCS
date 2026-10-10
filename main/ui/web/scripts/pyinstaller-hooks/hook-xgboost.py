@@ -15,7 +15,7 @@ xgboost is still collected, and the test-only helpers (plus pytest/hypothesis) s
 out of the packaged binary.
 """
 
-from PyInstaller.utils.hooks import collect_submodules
+from PyInstaller.utils.hooks import collect_submodules, collect_dynamic_libs, collect_data_files
 
 # Never import these while scanning: they pull in pytest and hypothesis.
 _EXCLUDED_PREFIXES = ("xgboost.testing", "xgboost.tests")
@@ -26,3 +26,8 @@ def _keep(name: str) -> bool:
 
 
 hiddenimports = collect_submodules("xgboost", filter=_keep)
+# Python modules alone do not include the native inference runtime.
+binaries = collect_dynamic_libs("xgboost")
+
+# XGBoost checks Python/native runtime versions when the DLL is loaded.
+datas = collect_data_files("xgboost", includes=["VERSION"])

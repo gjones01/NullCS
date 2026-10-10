@@ -1,5 +1,15 @@
 # NullCS
 
+## Community desktop beta
+
+Download the Windows x64 installer from [GitHub Releases](https://github.com/gjones01/NullCS/releases). This beta is unsigned; Windows may show an unknown-publisher warning. Do not disable security protections. Automatic updates are not configured yet: check Releases for new versions.
+
+Analyze a local CS2 `.dem` up to 1 GiB, review the ranked players, and save a plain-text report. Processing stays on your computer. Scores are research signals, not cheating verdicts. Read [release/setup requirements](DESKTOP_RELEASE.md) and [attributions](NOTICE.md).
+
+Original NullCS code and original model artifacts are GPL-3.0-only; third-party materials retain their own licenses. See [LICENSE](LICENSE). Contributions submitted for inclusion must be available under this license; contributors retain their copyrights.
+
+To build the desktop app, use Windows x64/Python 3.13, install `main/ui/web/scripts/requirements-desktop.lock.txt` in a fresh environment, and set `NULLCS_RELEASE_PYTHON` to its Python executable. Download the matching `nullcs-model-artifacts.zip` release asset, verify it against `SHA256SUMS.txt`, and extract its contents into `main/data/processed/models/`. Install the web dependencies with `npm ci` in `main/ui/web`, then run `npm run desktop:build`. The installer does not require an installed Python runtime. Building also requires Rust and the Windows desktop build tools documented in DESKTOP_RELEASE.md.
+
 NullCS reads Counter-Strike 2 demo files and turns them into a ranked list of
 players worth a human look, together with the measurements that pushed each score
 up.

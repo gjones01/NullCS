@@ -59,7 +59,7 @@ export function ProjectIntro() {
             <Reveal key={item.title} delay={index * 0.06}>
               <HoverPanel>
                 <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-5">
-                  <item.icon className="h-5 w-5 text-[#d97a4a]" />
+                  <item.icon className="h-5 w-5 text-[#65baff]" />
                   <h3 className="mt-4 font-display text-xl tracking-[-0.04em] text-white">{item.title}</h3>
                   <p className="mt-2 text-sm leading-6 text-zinc-400">{item.body}</p>
                 </div>

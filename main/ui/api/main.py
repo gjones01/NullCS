@@ -9,14 +9,17 @@ import subprocess
 import threading
 import time
 import uuid
+import secrets
+from contextlib import asynccontextmanager
 from pathlib import Path
 import sys
 
 import pandas as pd
-from fastapi import APIRouter, Body, FastAPI, File, Form, HTTPException, Query, Request, UploadFile
+from fastapi import APIRouter, FastAPI, File, Form, HTTPException, Query, Request, UploadFile
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel, ConfigDict, Field, StrictStr
 
 from .config import (
     APP_MODE,
@@ -48,11 +51,12 @@ from .config import (
     model_version_label,
 )
 from main.src.utils.model_registry import resolve_model_artifacts
+from . import config as settings
 from main.src.utils.behavioral_context import build_demo_interpretations, interpretation_from_summary, load_demo_frames, build_demo_player_summary
 
 APP_VERSION = "0.3.0"
 PUBLIC_PATHS = {"/"}
-PIPELINE_STEPS = ["Uploading", "Parsing", "Feature Build", "Model", "Explanation"]
+PIPELINE_STEPS = ["Queued", "Parsing", "Feature processing", "Temporal inference", "Scoring", "Results ready"]
 SAFE_SEGMENT_RE = re.compile(r"^[A-Za-z0-9_-]{1,128}$")
 SAFE_FILENAME_RE = re.compile(r"^evidence_[A-Za-z0-9_-]{1,80}\.csv$")
 BANNED_MAGIC_PREFIXES = (
@@ -92,9 +96,27 @@ def _allowed_origins() -> list[str]:
     return origins
 
 
+@asynccontextmanager
+async def lifespan(app):
+    if IS_DESKTOP_MODE:
+        for job_id, row in _load_jobs().items():
+            if row.get("state") in {"running", "queued"}:
+                _set_job(job_id, state="error", error="The app closed before this analysis finished. Select the demo and retry.")
+    if settings.WEB_ANALYSIS:
+        from .analysis import AnalysisService
+        app.state.analysis = AnalysisService(settings)
+        app.state.analysis.start()
+    try:
+        yield
+    finally:
+        if settings.WEB_ANALYSIS:
+            app.state.analysis.stop()
+
+
 app = FastAPI(
     title="NullCS UI API",
     version=APP_VERSION,
+    lifespan=lifespan,
     docs_url=None if (IS_PRODUCTION or IS_DESKTOP_MODE) else "/docs",
     redoc_url=None if (IS_PRODUCTION or IS_DESKTOP_MODE) else "/redoc",
     openapi_url=None if (IS_PRODUCTION or IS_DESKTOP_MODE) else "/openapi.json",
@@ -104,8 +126,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=_allowed_origins(),
     allow_credentials=False,
-    allow_methods=["GET", "POST", "OPTIONS"],
-    allow_headers=["Content-Type", "X-NULLCS-KEY"],
+    allow_methods=["GET", "POST", "PUT", "OPTIONS"],
+    allow_headers=["Content-Type", "X-NULLCS-KEY", "Authorization"],
 )
 
 _jobs_lock = threading.Lock()
@@ -174,9 +196,16 @@ def _sanitize_log_text(text: str) -> str:
 
 
 def _tail(path: Path, n: int = 120) -> str:
-    if not path.exists():
+    # Queued jobs have no log yet. Bound reads even for long parser diagnostics.
+    try:
+        if not path.is_file():
+            return ""
+        with path.open("rb") as handle:
+            handle.seek(0, 2)
+            handle.seek(max(0, handle.tell() - 128 * 1024))
+            lines = handle.read().decode("utf-8", errors="replace").splitlines()
+    except OSError:
         return ""
-    lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
     return _sanitize_log_text("\n".join(lines[-n:]))
 
 
@@ -193,7 +222,9 @@ def _load_jobs() -> dict:
 
 def _save_jobs(jobs: dict) -> None:
     STATE_DIR.mkdir(parents=True, exist_ok=True)
-    JOBS_PATH.write_text(json.dumps(jobs, indent=2), encoding="utf-8")
+    temp = JOBS_PATH.with_suffix(".tmp")
+    temp.write_text(json.dumps(jobs, indent=2), encoding="utf-8")
+    temp.replace(JOBS_PATH)
 
 
 def _set_job(demo_id: str, **fields) -> dict:
@@ -215,14 +246,17 @@ def _get_job(demo_id: str) -> dict | None:
 def _infer_pipeline_step(state: str, logs_tail: str) -> dict:
     stage_idx = 0
     txt = (logs_tail or "").lower()
+    for index, marker in enumerate(("parsing", "feature_processing", "inference", "scoring"), start=1):
+        if f"[nullcs_stage] {marker}" in txt:
+            stage_idx = index
     if "[info] parsed zip:" in txt:
         stage_idx = 2
-    if "engagement_features.parquet" in txt:
+    if "engagement_features.parquet" in txt and "[nullcs_stage]" not in txt:
         stage_idx = 3
     if "ranked_players_infer.csv" in txt:
         stage_idx = 4
     if state == "done":
-        stage_idx = 4
+        stage_idx = 5
     if state == "error":
         stage_idx = max(stage_idx, 1)
     stage_idx = max(0, min(stage_idx, len(PIPELINE_STEPS) - 1))
@@ -243,13 +277,20 @@ def _ensure_api_key(request: Request) -> None:
         return
     if request.url.path in PUBLIC_PATHS:
         return
+    if settings.WEB_ANALYSIS and request.url.path.startswith("/api/analysis/") and request.url.path.endswith("/upload") and request.method == "PUT":
+        # This route validates its single-use capability before consuming demo bytes.
+        return
+    if settings.WEB_ANALYSIS and request.url.path.startswith("/api/") and not (
+        request.url.path.startswith("/api/analysis") or request.url.path == "/api/health"
+    ):
+        raise HTTPException(status_code=404, detail="Route unavailable on website worker")
     expected_key = NULLCS_API_KEY if IS_PRODUCTION else (NULLCS_DESKTOP_KEY if IS_DESKTOP_MODE else "")
     if not expected_key:
         if not IS_PRODUCTION and not IS_DESKTOP_MODE:
             return
         raise HTTPException(status_code=503, detail="Server authentication is not configured")
     supplied = request.headers.get("X-NULLCS-KEY", "").strip()
-    if supplied != expected_key:
+    if not secrets.compare_digest(supplied, expected_key):
         raise HTTPException(status_code=401, detail="API key required")
 
 
@@ -262,7 +303,15 @@ def _ensure_rate_limit(request: Request) -> None:
         return
     if request.url.path == "/api/health":
         return
-    allowed, retry_after = limiter.allow(_client_ip(request))
+    key = _client_ip(request)
+    if settings.WEB_ANALYSIS:
+        # Never trust arbitrary X-Forwarded-For values on the public worker.
+        key = request.client.host if request.client else "unknown"
+        supplied = request.headers.get("X-NULLCS-KEY", "")
+        owner_id = request.headers.get("X-NULLCS-OWNER", "")
+        if NULLCS_API_KEY and secrets.compare_digest(supplied, NULLCS_API_KEY) and re.fullmatch(r"[0-9a-f]{64}", owner_id):
+            key = "owner:" + owner_id
+    allowed, retry_after = limiter.allow(key)
     if not allowed:
         raise HTTPException(
             status_code=429,
@@ -286,12 +335,24 @@ def _sanitize_trace(value):
     return value
 
 
+_desktop_pipeline_lock = threading.Lock()
+
+
 def _run_pipeline_background(demo_id: str, dem_path: Path) -> None:
+    with _desktop_pipeline_lock:
+        try:
+            _run_pipeline_job(demo_id, dem_path)
+        except Exception:
+            logger.exception("Desktop analysis failed: %s", demo_id)
+            _set_job(demo_id, state="error", error="Analysis could not finish. Restart the local engine and retry.")
+
+
+def _run_pipeline_job(demo_id: str, dem_path: Path) -> None:
     log_dir = REPORTS_DIR / demo_id / "logs"
     log_dir.mkdir(parents=True, exist_ok=True)
     log_path = log_dir / "pipeline.log"
     cmd = [
-        *([PIPELINE_EXE, "run-infer"] if PIPELINE_EXE else [str(PYTHON_EXE), "-u", str(SCRIPTS_DIR / "run_infer_pipeline.py")]),
+        *([PIPELINE_EXE, "run-infer"] if PIPELINE_EXE else [str(PYTHON_EXE), "-u", "-m", "main.ui.api.pipeline_child", str(SCRIPTS_DIR / "run_infer_pipeline.py")]),
         "--dem_path",
         str(dem_path),
         "--demo_id",
@@ -311,6 +372,8 @@ def _run_pipeline_background(demo_id: str, dem_path: Path) -> None:
             stdout=lf,
             stderr=subprocess.STDOUT,
             text=True,
+            stdin=subprocess.PIPE,
+            creationflags=subprocess.CREATE_NO_WINDOW if sys.platform.startswith("win") else 0,
         )
         _set_job(demo_id, pid=proc.pid)
         try:
@@ -320,6 +383,8 @@ def _run_pipeline_background(demo_id: str, dem_path: Path) -> None:
             code = 124
             lf.write(f"\n[{_now()}] TIMEOUT after {JOB_TIMEOUT_SECONDS} seconds\n")
             lf.flush()
+        if proc.stdin:
+            proc.stdin.close()
         lf.write(f"\n[{_now()}] EXIT_CODE {code}\n")
         lf.flush()
     if code == 0:
@@ -330,6 +395,19 @@ def _run_pipeline_background(demo_id: str, dem_path: Path) -> None:
         message = "Analysis job timed out"
     elif "EntityNotFound" in logs_tail or "DemoParser.Exception" in logs_tail:
         message = "The parser could not read this demo. It may be from an unsupported CS2 patch, incomplete replay download, or a demo format demoparser2 cannot currently decode."
+    elif "refusing to score" in logs_tail or "tick schema is missing" in logs_tail:
+        # The parser guard in src/adapters/demoparser2_local.py deliberately aborts instead of
+        # zero-filling fields the model needs. That is a different failure than an unreadable demo
+        # and it must not read as a generic "job failed", or the guard looks like a crash.
+        message = (
+            "This demo is from a CS2 patch the installed parser no longer matches: a tick field the "
+            "scoring model depends on is missing, so analysis refused to guess a result. Update the "
+            "parser/backend build, then retry."
+        )
+    elif "Unsupported --demo_id" in logs_tail:
+        # run_infer_pipeline validates the id before parsing; a rejection here is an app-side id bug,
+        # not a problem with the demo the user uploaded.
+        message = "The app passed an internal demo id the loader cannot resolve; no inference was attempted."
     else:
         message = "Analysis job failed"
     _set_job(demo_id, state="error", return_code=code, error=message)
@@ -437,7 +515,7 @@ def _pid_is_running(pid_value: object) -> bool:
 def _reconcile_job_state(demo_id: str, cur: dict) -> dict:
     state = str(cur.get("state", "queued")).strip().lower()
     artifact = _infer_artifact_status(demo_id)
-    if state not in {"queued", "running"} and artifact.get("state") == "done":
+    if state not in {"queued", "running", "error"} and artifact.get("state") == "done":
         if state != "done":
             cur = _set_job(
                 demo_id,
@@ -545,8 +623,8 @@ def _health_payload() -> dict[str, object]:
         "environment": APP_ENV,
         "mode": APP_MODE,
         "auth_required": IS_PRODUCTION or IS_DESKTOP_MODE,
-        "upload_enabled": not DEMO_MODE and (IS_DESKTOP_MODE or not IS_PRODUCTION),
-        "max_upload_bytes": (MAX_UPLOAD_BYTES if MAX_UPLOAD_BYTES > 0 else None),
+        "upload_enabled": (bool(getattr(app.state, 'analysis', None) and app.state.analysis.thread.is_alive()) if settings.WEB_ANALYSIS else not DEMO_MODE),
+        "max_upload_bytes": (settings.WEB_MAX_UPLOAD_BYTES if settings.WEB_ANALYSIS else (MAX_UPLOAD_BYTES if MAX_UPLOAD_BYTES > 0 else None)),
         "model_version": model_version_label(),
         "model_info": model_info,
         "product_info": {
@@ -588,7 +666,9 @@ async def security_middleware(request: Request, call_next):
     try:
         _ensure_rate_limit(request)
         _ensure_api_key(request)
-        response = await asyncio.wait_for(call_next(request), timeout=REQUEST_TIMEOUT_SECONDS)
+        is_direct_upload = settings.WEB_ANALYSIS and request.method == "PUT" and request.url.path.endswith("/upload")
+        timeout = settings.WEB_UPLOAD_TIMEOUT_SECONDS + 5 if is_direct_upload else REQUEST_TIMEOUT_SECONDS
+        response = await asyncio.wait_for(call_next(request), timeout=timeout)
     except asyncio.TimeoutError:
         return _json_error(504, "Request timed out", "request_timeout")
     except HTTPException as exc:
@@ -608,7 +688,7 @@ async def security_middleware(request: Request, call_next):
 @app.exception_handler(HTTPException)
 async def http_exception_handler(_request: Request, exc: HTTPException):
     detail = exc.detail if isinstance(exc.detail, str) else "Request failed"
-    if exc.status_code >= 500 and IS_PRODUCTION:
+    if exc.status_code >= 500 and (IS_PRODUCTION or IS_DESKTOP_MODE) and not _request.url.path.startswith("/api/analysis"):
         detail = "Server error"
     return _json_error(exc.status_code, detail, f"http_{exc.status_code}", headers=exc.headers)
 
@@ -621,7 +701,7 @@ async def validation_exception_handler(_request: Request, _exc: RequestValidatio
 @app.exception_handler(Exception)
 async def unhandled_exception_handler(_request: Request, exc: Exception):
     logger.exception("Unhandled API error", exc_info=exc)
-    message = "Server error" if IS_PRODUCTION else f"Server error: {exc}"
+    message = "Server error" if (IS_PRODUCTION or IS_DESKTOP_MODE) else f"Server error: {exc}"
     return _json_error(500, message, "internal_error")
 
 
@@ -671,20 +751,32 @@ async def upload_demo(request: Request, file: UploadFile = File(...), demo_id: s
     return {"demo_id": safe_demo_id, "original_filename": filename}
 
 
+class LocalDemoRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    path: StrictStr = Field(min_length=1, max_length=32767)
+
+
 @api.post("/demo/from-path")
 def queue_demo_from_path(
     request: Request,
-    payload: dict = Body(...),
+    payload: LocalDemoRequest,
 ) -> dict:
     if DEMO_MODE:
         raise HTTPException(status_code=403, detail="Public demo mode does not run analysis jobs")
     if not IS_DESKTOP_MODE:
         raise HTTPException(status_code=403, detail="Local-path demo intake is only available in desktop mode")
 
-    raw_path = str(payload.get("path", "")).strip()
+    raw_path = payload.path.strip()
     if not raw_path:
         raise HTTPException(status_code=400, detail="Missing local demo path")
-    dem_path = Path(raw_path).expanduser().resolve()
+    if "\x00" in raw_path or raw_path.startswith(("\\\\", "//")):
+        raise HTTPException(status_code=400, detail="Select a demo on a local drive, not a network or device path")
+    try:
+        dem_path = Path(raw_path).expanduser().resolve()
+    except (OSError, ValueError, RuntimeError):
+        raise HTTPException(status_code=400, detail="Unable to read the selected demo path")
+    if str(dem_path).startswith(("\\\\", "//")):
+        raise HTTPException(status_code=400, detail="Select a demo on a local drive")
     if not dem_path.exists() or not dem_path.is_file() or dem_path.suffix.lower() != ".dem":
         raise HTTPException(status_code=400, detail="Expected an existing local .dem file")
 
@@ -696,15 +788,14 @@ def queue_demo_from_path(
         raise HTTPException(status_code=413, detail="Selected demo exceeds the configured size limit")
     try:
         with dem_path.open("rb") as handle:
-            if _is_banned_magic(handle.read(16)):
-                raise HTTPException(status_code=400, detail="Archives and executable formats are not allowed")
+            if not handle.read(8).startswith(b"PBDEMS2\x00"):
+                raise HTTPException(status_code=400, detail="Select a complete Counter-Strike 2 .dem file")
     except HTTPException:
         raise
     except OSError:
         raise HTTPException(status_code=400, detail="Unable to read the selected demo file")
 
-    requested_demo_id = payload.get("demo_id")
-    safe_demo_id = _sanitize_segment(requested_demo_id, "demo_id") if requested_demo_id else _demo_id()
+    safe_demo_id = _demo_id()
     _set_job(
         safe_demo_id,
         state="queued",
@@ -743,6 +834,22 @@ def run_demo(demo_id: str) -> dict:
     thread = threading.Thread(target=_run_pipeline_background, args=(safe_demo_id, dem_path), daemon=True)
     thread.start()
     return {"demo_id": safe_demo_id, "state": "queued"}
+
+
+@api.get("/desktop/demo/{demo_id}/result")
+def desktop_result(demo_id: str) -> dict:
+    if not IS_DESKTOP_MODE:
+        raise HTTPException(404, "Route unavailable")
+    job = _sanitize_segment(demo_id, "demo_id")
+    status = _get_job(job)
+    if not status or _reconcile_job_state(job, status).get("state") != "done":
+        raise HTTPException(409, "Analysis results are not ready")
+    from .desktop_result import read_result
+    try:
+        return read_result(REPORTS_DIR / job, job, status.get("original_filename", job))
+    except Exception:
+        logger.exception("Desktop result unavailable: %s", job)
+        raise HTTPException(503, "The saved result could not be read. Analyze the demo again.")
 
 
 @api.get("/demo/{demo_id}/status")
@@ -1030,10 +1137,19 @@ def demo_players(demo_id: str, debug: int = Query(default=0)) -> dict:
         raise HTTPException(status_code=404, detail="Inference results are not available")
     df = pd.read_csv(INFER_CSV)
     data = df[df["demo_id"].astype(str) == safe_demo_id].copy()
+    players = players_from_frame(safe_demo_id, data)
+    response: dict[str, object] = {"demo_id": safe_demo_id, "players": players}
+    if int(debug) == 1 and ENABLE_DIAGNOSTICS:
+        response["debug"] = {"enabled": True, "trace": _load_debug_trace(safe_demo_id)}
+    return response
+
+
+def players_from_frame(safe_demo_id: str, data: pd.DataFrame, *, review_order: bool = True) -> list[dict]:
+    """Shared presentation; production keeps the canonical pipeline's risk order."""
     if data.empty:
-        return {"demo_id": safe_demo_id, "players": []}
+        return []
     sort_col = "risk" if "risk" in data.columns else "proba_cheater_infer"
-    data = data.sort_values(sort_col, ascending=False).reset_index(drop=True)
+    data = (data.sort_values(sort_col, ascending=False) if review_order else data).reset_index(drop=True)
 
     interpretation_map: dict[str, dict] = {}
     summary_map: dict[str, dict] = {}
@@ -1084,7 +1200,8 @@ def demo_players(demo_id: str, debug: int = Query(default=0)) -> dict:
         review_val = float(interpretation.get("review_priority") or risk_val)
         return (risk_val * 0.72) + (review_val * 0.28)
 
-    players.sort(key=_player_sort_score, reverse=True)
+    if review_order:
+        players.sort(key=_player_sort_score, reverse=True)
     total_players = int(len(players))
     for rank_idx, player in enumerate(players, start=1):
         interpretation = player.get("interpretation")
@@ -1111,10 +1228,7 @@ def demo_players(demo_id: str, debug: int = Query(default=0)) -> dict:
             if total_players
             else match_profile.get("summary")
         )
-    response: dict[str, object] = {"demo_id": safe_demo_id, "players": players}
-    if int(debug) == 1 and ENABLE_DIAGNOSTICS:
-        response["debug"] = {"enabled": True, "trace": _load_debug_trace(safe_demo_id)}
-    return response
+    return players
 
 
 @api.get("/demo/{demo_id}/player/{steamid}/score-trace")
@@ -1315,3 +1429,5 @@ def player_report(demo_id: str, steamid: str) -> dict:
     return {"demo_id": safe_demo_id, "steamid": safe_steamid, "reasons": _sanitize_trace(reasons), "evidence": evidence}
 
 app.include_router(api)
+from .analysis import router as analysis_router
+app.include_router(analysis_router)

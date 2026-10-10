@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+from importlib import metadata
 from pathlib import Path
 import sys
+from typing import Mapping
 
 import pandas as pd
 from demoparser2 import DemoParser
@@ -24,6 +26,36 @@ CRITICAL_TICK_COLUMNS = {
     "is_alive",
     "team_num",
 }
+
+# Tick props that reach model/report inputs. Verified 2026-09-30 against the
+# 449-feature XGB contract (active_weapon_name -> weapon_entropy /
+# dominant_weapon_share; is_walking -> enc_walking_*; is_airborne ->
+# enc_airborne_*) and the 35 NN temporal channels (a_mdx/a_mdy,
+# cmd_pitch_delta/cmd_yaw_delta, a_scoped, a_flashed, v_spotted, a_walking,
+# a_airborne, attacker_speed/relative_speed from velocity_*).
+#
+# demoparser2 is silent about unknown props, and CS2 sendtable churn removes and
+# renames them between patches (14135 -> 14153 dropped 53 fields, including
+# CCSPlayer_WeaponServices.m_bIsLookingAtWeapon). Without this guard a dropped
+# model prop is zero-filled from DEFAULT_TICK_COLUMNS and the score changes with
+# no warning, so _ticks_table() refuses to score the demo instead.
+MODEL_TICK_COLUMNS = frozenset(
+    {
+        "active_weapon_name",
+        "flash_duration",
+        "is_airborne",
+        "is_scoped",
+        "is_walking",
+        "spotted",
+        "usercmd_mouse_dx",
+        "usercmd_mouse_dy",
+        "usercmd_viewangle_x",
+        "usercmd_viewangle_y",
+        "velocity_X",
+        "velocity_Y",
+        "velocity_Z",
+    }
+)
 
 DEFAULT_TICK_COLUMNS: dict[str, object] = {
     "name": "",
@@ -49,11 +81,92 @@ DEFAULT_TICK_COLUMNS: dict[str, object] = {
     "velocity_Z": 0.0,
 }
 
+# Props requested from demoparser2 for every tick table, in one place so the parser
+# contract can be probed by the smoke check (main/scripts/check_parser_contract.py)
+# against exactly what production asks for. "tick"/"steamid" are always returned by
+# demoparser2 and are not listed here.
+WANTED_TICK_PROPS: tuple[str, ...] = (
+    "X",
+    "Y",
+    "Z",
+    "yaw",
+    "pitch",
+    "health",
+    "is_alive",
+    "team_num",
+    "team_name",
+    "active_weapon_name",
+    "is_scoped",
+    "flash_duration",
+    "is_walking",
+    "is_airborne",
+    "spotted",
+    "move_collide",
+    "move_type",
+    "looking_at_weapon",
+    "holding_look_at_weapon",
+    "buttons",
+    "usercmd_mouse_dx",
+    "usercmd_mouse_dy",
+    "usercmd_viewangle_x",
+    "usercmd_viewangle_y",
+    "velocity_X",
+    "velocity_Y",
+    "velocity_Z",
+)
+
+_UNREQUESTED_TICK_COLUMNS = sorted(set(DEFAULT_TICK_COLUMNS).difference({"name"}, WANTED_TICK_PROPS))
+if _UNREQUESTED_TICK_COLUMNS:
+    raise RuntimeError(
+        "DEFAULT_TICK_COLUMNS entries demoparser2 is never asked for would be zero-filled from a "
+        f"value no demo can override: {_UNREQUESTED_TICK_COLUMNS}"
+    )
+
+# Everything that is not a model input is decorative: it is rendered/reported but
+# never scored, so a missing one stays lenient (zero-filled with a [WARN] naming it).
+DECORATIVE_TICK_COLUMNS: dict[str, object] = {
+    key: default for key, default in DEFAULT_TICK_COLUMNS.items() if key not in MODEL_TICK_COLUMNS
+}
+
+_UNBACKED_MODEL_TICK_COLUMNS = sorted(MODEL_TICK_COLUMNS.difference(DEFAULT_TICK_COLUMNS))
+if _UNBACKED_MODEL_TICK_COLUMNS:
+    raise RuntimeError(
+        "MODEL_TICK_COLUMNS entries without a DEFAULT_TICK_COLUMNS fallback would break the "
+        f"decorative zero-fill loop: {_UNBACKED_MODEL_TICK_COLUMNS}"
+    )
+
+# Header fields stamped into infer artifacts as parser provenance.
+PROVENANCE_HEADER_KEYS = ("patch_version", "demo_version_name", "demo_version_guid", "map_name")
+
 
 def _col(df: pd.DataFrame, name: str, default: object) -> pd.Series:
     if name in df.columns:
         return df[name]
     return pd.Series(default, index=df.index)
+
+
+def package_version(name: str) -> str | None:
+    try:
+        return metadata.version(name)
+    except metadata.PackageNotFoundError:
+        return None
+
+
+def parser_provenance(header: Mapping[str, object] | None = None) -> dict[str, object]:
+    """Provenance for one demoparser2-parsed demo: CS2 patch/build + the parser version.
+
+    Recorded because neither the CS2 patch nor the demoparser2 build was stamped
+    anywhere before, so a stored score could not be traced back to a suspect parser.
+    """
+    out: dict[str, object] = {"demoparser2_version": package_version("demoparser2")}
+    for key in PROVENANCE_HEADER_KEYS:
+        value = (header or {}).get(key)
+        if value is None:
+            continue
+        text = str(value).strip()
+        if text:
+            out[key] = text
+    return out
 
 
 def _safe_event(parser: DemoParser, event_name: str) -> pd.DataFrame:
@@ -157,36 +270,7 @@ def _damages_table(df: pd.DataFrame, round_starts: list[int]) -> pd.DataFrame:
 
 
 def _ticks_table(parser: DemoParser) -> pd.DataFrame:
-    wanted = [
-        "X",
-        "Y",
-        "Z",
-        "yaw",
-        "pitch",
-        "health",
-        "is_alive",
-        "team_num",
-        "team_name",
-        "active_weapon_name",
-        "is_scoped",
-        "flash_duration",
-        "is_walking",
-        "is_airborne",
-        "spotted",
-        "move_collide",
-        "move_type",
-        "looking_at_weapon",
-        "holding_look_at_weapon",
-        "buttons",
-        "usercmd_mouse_dx",
-        "usercmd_mouse_dy",
-        "usercmd_viewangle_x",
-        "usercmd_viewangle_y",
-        "velocity_X",
-        "velocity_Y",
-        "velocity_Z",
-    ]
-    df = parser.parse_ticks(wanted)
+    df = parser.parse_ticks(list(WANTED_TICK_PROPS))
     out = df if isinstance(df, pd.DataFrame) else pd.DataFrame(df)
     if out.empty:
         raise RuntimeError("demoparser2 returned no tick rows; refusing to score this demo")
@@ -196,7 +280,23 @@ def _ticks_table(parser: DemoParser) -> pd.DataFrame:
             "demoparser2 tick schema is missing required columns "
             f"{missing}; update the adapter before scoring this demo"
         )
-    for col, default in DEFAULT_TICK_COLUMNS.items():
+    missing_model = sorted(MODEL_TICK_COLUMNS.difference(out.columns))
+    if missing_model:
+        raise RuntimeError(
+            "demoparser2 tick schema is missing model-input columns "
+            f"{missing_model}; refusing to score this demo. "
+            "A CS2 patch removed or renamed a sendtable prop that feeds the feature "
+            "contract, and zero-filling it would change the score silently. Confirm the "
+            "demo's patch_version and re-check the prop names (demoparser2 "
+            "list_updated_fields) before scoring."
+        )
+    dropped_decorative = sorted(col for col in DECORATIVE_TICK_COLUMNS if col not in out.columns)
+    if dropped_decorative:
+        print(
+            "[WARN] demoparser2 omitted decorative tick columns "
+            f"{dropped_decorative}; zero-filling them (rendered only, not model inputs)"
+        )
+    for col, default in DECORATIVE_TICK_COLUMNS.items():
         if col not in out.columns:
             out[col] = default
     out["steamid"] = out["steamid"].astype(str).str.strip()
@@ -211,6 +311,7 @@ def load_demo(demo_path: str | Path, demo_id: str) -> CS2CDMatch:
     parser = DemoParser(str(path))
     header = parser.parse_header()
     map_name = str(header.get("map_name", "unknown_map"))
+    provenance = parser_provenance(header)
 
     round_starts = _safe_event(parser, "round_freeze_end")
     round_ends = _safe_event(parser, "round_officially_ended")
@@ -238,4 +339,5 @@ def load_demo(demo_path: str | Path, demo_id: str) -> CS2CDMatch:
         damages=damages,
         shots=shots,
         rounds=rounds,
+        parser_provenance=provenance,
     )

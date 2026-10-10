@@ -1,0 +1,14 @@
+**
+!main/
+!main/src/
+!main/src/**
+!main/scripts/
+!main/scripts/**
+!main/ui/
+!main/ui/api/
+!main/ui/api/**
+**/__pycache__/
+**/*.pyc
+**/.env*
+main/ui/api/state/
+main/ui/api/tests/

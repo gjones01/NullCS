@@ -17,7 +17,7 @@ export function CapabilitiesGrid() {
             <HoverPanel>
               <article className="group rounded-[1.9rem] border border-white/10 bg-white/[0.03] p-7 transition-colors hover:border-white/20 hover:bg-white/[0.045]">
                 <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-[#11141d] transition-transform duration-500 group-hover:rotate-3">
-                  <card.icon className="h-5 w-5 text-[#d97a4a]" />
+                  <card.icon className="h-5 w-5 text-[#65baff]" />
                 </div>
                 <h3 className="mt-6 font-display text-2xl tracking-[-0.05em] text-white">{card.title}</h3>
                 <p className="mt-3 max-w-lg text-sm leading-7 text-zinc-400">{card.body}</p>

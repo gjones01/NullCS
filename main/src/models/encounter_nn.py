@@ -343,6 +343,42 @@ def _safe_demo_token(stem: str) -> str:
     return token or stem
 
 
+# demo_id prefixes the temporal loader resolves from an existing artefact instead of
+# from a per-demo meta.json: CS2CD dataset matches and raw demo uploads. Any other id is
+# loadable only when demos/<demo_id>/meta.json points at an existing source demo (see
+# the branches below - keep these constants in sync with them).
+#
+# run_infer_pipeline.py validates --demo_id against this before parsing: an unsupported
+# id used to complete the whole parse + feature build and then fail deep inside encounter
+# scoring ("Unsupported demo source for temporal model"), which is late and opaque.
+CS2CD_DEMO_ID_PREFIXES: tuple[str, ...] = ("CS2CD_PROLEGIT_", "CS2CD_")
+UPLOAD_DEMO_ID_PREFIXES: tuple[str, ...] = ("TEST_", "BENCH_")
+INLINE_DEMO_ID_PREFIXES: tuple[str, ...] = (*CS2CD_DEMO_ID_PREFIXES, *UPLOAD_DEMO_ID_PREFIXES)
+
+
+def demo_id_loader_supported(demo_id: str) -> bool:
+    """True when `_load_match_for_demo_id()` can resolve a demo source for this id."""
+    token = str(demo_id or "").strip()
+    if not token:
+        return False
+    if token.startswith(INLINE_DEMO_ID_PREFIXES):
+        return True
+    project_paths = _load_local_module("_nullcs_project_paths", ("src", "utils", "project_paths.py"))
+    meta_path = Path(project_paths.DEMOS_ROOT) / token / "meta.json"
+    if not meta_path.exists():
+        return False
+    try:
+        meta = json.loads(meta_path.read_text(encoding="utf-8"))
+    except Exception:
+        return False
+    if not isinstance(meta, dict):
+        return False
+    raw_source = str(meta.get("source_demo", "")).strip()
+    if not raw_source:
+        return False
+    return Path(raw_source).exists()
+
+
 def _load_match_for_demo_id(demo_id: str):
     cs2cd_adapter = _load_local_module("_nullcs_cs2cd_adapter", ("src", "adapters", "cs2cd_adapter.py"))
     demoparser2_local = _load_local_module("_nullcs_demoparser2_local", ("src", "adapters", "demoparser2_local.py"))
@@ -373,7 +409,7 @@ def _load_match_for_demo_id(demo_id: str):
         else:
             raise ValueError(f"Unrecognized CS2CD demo_id split in temporal loader: {demo_id}")
         match = cs2cd_adapter.load_match(split, match_id)
-    elif demo_id.startswith("TEST_") or demo_id.startswith("BENCH_"):
+    elif demo_id.startswith(UPLOAD_DEMO_ID_PREFIXES):
         demo_path = RAW_UPLOADS_ROOT / demo_id / f"{demo_id}.dem"
         if not demo_path.exists():
             raise FileNotFoundError(f"Missing raw uploaded demo for {demo_id}: {demo_path}")

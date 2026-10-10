@@ -19,6 +19,7 @@ export const navItems = [
   { href: "/#pipeline", label: "Pipeline" },
   { href: "/#proof", label: "Benchmarks" },
   { href: "/about", label: "About" },
+  { href: "/analyze", label: "Download" },
 ] as const;
 
 export const heroMetrics = [

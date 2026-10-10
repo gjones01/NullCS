@@ -1,12 +1,12 @@
 [package]
 name = "nullcs-desktop"
-version = "0.1.0-alpha.2"
+version = "0.1.0-beta.1"
 description = "NullCS desktop beta client"
 authors = ["NullCS"]
-license = "Proprietary"
-repository = ""
+license = "GPL-3.0-only"
+repository = "https://github.com/gjones01/NullCS"
 edition = "2021"
-rust-version = "1.77.2"
+rust-version = "1.90"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -15,13 +15,16 @@ name = "nullcs_desktop_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
-tauri-build = { version = "2.5.6", features = [] }
+tauri-build = { version = "2.6.3", features = [] }
 
 [dependencies]
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 log = "0.4"
-tauri = { version = "2.10.3", features = [] }
-tauri-plugin-log = "2"
-uuid = { version = "1.18.1", features = ["v4"] }
+tauri = { version = "2.11.5", features = [] }
+tauri-plugin-log = "2.9.0"
+uuid = { version = "1.24.0", features = ["v4"] }
 rfd = "0.15"
+
+sha2 = "0.10"
+tauri-plugin-updater = "=2.12.0"

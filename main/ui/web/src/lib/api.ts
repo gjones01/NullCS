@@ -247,7 +247,7 @@ async function parseError(response: Response): Promise<string> {
 async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
   let response: Response;
   try {
-    response = await fetch(apiUrl(path), { ...init, headers: apiHeaders(init) });
+    response = await fetch(apiUrl(path), { ...init, headers: apiHeaders(init), signal: init?.signal ?? AbortSignal.timeout(30000) });
   } catch {
     throw new Error("Live analysis service is unavailable.");
   }
@@ -269,11 +269,11 @@ export async function uploadDemo(file: File, demoId?: string) {
 }
 
 
-export async function queueLocalDemoPath(path: string, demoId?: string) {
+export async function queueLocalDemoPath(path: string) {
   return fetchJson<{ demo_id: string; state: string; original_filename?: string }>("/demo/from-path", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ path, demo_id: demoId || undefined }),
+    body: JSON.stringify({ path }),
   });
 }
 export async function runDemo(demoId: string) {

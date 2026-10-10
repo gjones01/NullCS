@@ -111,3 +111,6 @@ docs/training_log.md
 docs/assets/linkedin/**
 docs/assets/trailer/**
 docs/assets/trailer_real/**
+
+# Generated release resources
+main/ui/web/src-tauri/resources/legal/

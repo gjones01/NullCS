@@ -12,6 +12,8 @@ use std::{
 };
 use tauri::Manager;
 use uuid::Uuid;
+use sha2::{Digest, Sha256};
+use tauri_plugin_updater::UpdaterExt;
 use rfd::FileDialog;
 
 #[cfg(target_os = "windows")]
@@ -22,6 +24,8 @@ const LOCAL_API_PORT_BASE: u16 = 8011;
 #[cfg(target_os = "windows")]
 const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 
+static INSTANCE_LOCK: OnceLock<fs::File> = OnceLock::new();
+static LOCAL_API_START: Mutex<()> = Mutex::new(());
 static LOCAL_API_CHILD: OnceLock<Mutex<Option<Child>>> = OnceLock::new();
 static DESKTOP_API_KEY: OnceLock<String> = OnceLock::new();
 static LOCAL_API_PORT: OnceLock<u16> = OnceLock::new();
@@ -135,6 +139,7 @@ fn candidate_roots() -> Vec<PathBuf> {
     }
   }
 
+  #[cfg(debug_assertions)]
   for hardcoded in [r"C:\NullCS", r"C:\ClarityCS"] {
     push(PathBuf::from(hardcoded));
   }
@@ -204,22 +209,15 @@ fn packaged_sidecar_exe(repo_root: &Path) -> Option<PathBuf> {
 }
 
 fn certutil_sha256(path: &Path) -> Option<String> {
-  let output = Command::new("certutil")
-    .arg("-hashfile")
-    .arg(path)
-    .arg("SHA256")
-    .stdout(Stdio::piped())
-    .stderr(Stdio::null())
-    .output()
-    .ok()?;
-  if !output.status.success() {
-    return None;
+  let mut file = fs::File::open(path).ok()?;
+  let mut hash = Sha256::new();
+  let mut buffer = [0u8; 65536];
+  loop {
+    let count = file.read(&mut buffer).ok()?;
+    if count == 0 { break; }
+    hash.update(&buffer[..count]);
   }
-  let stdout = String::from_utf8_lossy(&output.stdout);
-  stdout
-    .lines()
-    .map(|line| line.trim().replace(' ', "").to_ascii_lowercase())
-    .find(|line| line.len() == 64 && line.chars().all(|ch| ch.is_ascii_hexdigit()))
+  Some(format!("{:x}", hash.finalize()))
 }
 
 fn verify_packaged_backend(root: &Path) -> bool {
@@ -238,7 +236,7 @@ fn verify_packaged_backend(root: &Path) -> bool {
     Ok(text) => text,
     Err(_) => return false,
   };
-  let manifest: BackendManifest = match serde_json::from_str(&manifest_text) {
+  let manifest: BackendManifest = match serde_json::from_str(manifest_text.trim_start_matches('\u{feff}')) {
     Ok(value) => value,
     Err(_) => return false,
   };
@@ -246,6 +244,7 @@ fn verify_packaged_backend(root: &Path) -> bool {
     Ok(path) => path,
     Err(_) => return false,
   };
+  if manifest.files.is_empty() || !manifest.files.iter().any(|f| f.path == "nullcs-backend.exe") { return false; }
   for file in manifest.files {
     if file.path.contains("..") || file.path.starts_with('/') || file.path.starts_with('\\') {
       return false;
@@ -280,7 +279,7 @@ fn copy_dir_missing(src: &Path, dst: &Path) -> std::io::Result<()> {
     let file_type = entry.file_type()?;
     if file_type.is_dir() {
       copy_dir_missing(&src_path, &dst_path)?;
-    } else if file_type.is_file() && !dst_path.exists() {
+    } else if file_type.is_file() && (!dst_path.exists() || certutil_sha256(&src_path) != certutil_sha256(&dst_path)) {
       fs::copy(&src_path, &dst_path)?;
     }
   }
@@ -373,6 +372,7 @@ fn desktop_status(error: Option<String>) -> DesktopServiceStatus {
 }
 
 fn spawn_local_api() -> Result<DesktopServiceStatus, String> {
+  let _startup = LOCAL_API_START.lock().map_err(|_| "Engine startup state unavailable".to_string())?;
   if local_api_healthy() {
     return Ok(desktop_status(None));
   }
@@ -436,8 +436,13 @@ fn spawn_local_api() -> Result<DesktopServiceStatus, String> {
     .current_dir(&repo_root)
     .env("NULLCS_PROJECT_ROOT", &repo_root)
     .env("CLARITY_PROJECT_ROOT", &repo_root)
+    .env_remove("NULLCS_API_KEY")
+    .env_remove("NULLCS_MODEL_ARTIFACT")
+    .env_remove("CLARITY_MODEL_ARTIFACT")
+    .env("NULLCS_WEB_ANALYSIS", "0")
     .env("NULLCS_ENV", "desktop")
     .env("NULLCS_DESKTOP_MODE", "1")
+    .env("NULLCS_DESKTOP_PARENT_WATCHDOG", "1")
     .env("NULLCS_DESKTOP_KEY", desktop_api_key())
     .env("NULLCS_ENABLE_DIAGNOSTICS", "0")
     .env("NULLCS_DEMO_MODE", "0")
@@ -454,6 +459,7 @@ fn spawn_local_api() -> Result<DesktopServiceStatus, String> {
     cmd.env("NULLCS_PIPELINE_EXE", sidecar_exe);
   }
   cmd
+    .stdin(Stdio::piped())
     .stdout(Stdio::from(stdout_log))
     .stderr(Stdio::from(stderr_log));
   #[cfg(target_os = "windows")]
@@ -471,7 +477,7 @@ fn spawn_local_api() -> Result<DesktopServiceStatus, String> {
     *guard = Some(child);
   }
 
-  for _ in 0..8 {
+  for _ in 0..120 {
     if local_api_healthy() {
       return Ok(desktop_status(None));
     }
@@ -497,8 +503,8 @@ fn desktop_service_status() -> DesktopServiceStatus {
 }
 
 #[tauri::command]
-fn desktop_service_start() -> DesktopServiceStatus {
-  match spawn_local_api() {
+async fn desktop_service_start() -> DesktopServiceStatus {
+  match tauri::async_runtime::spawn_blocking(spawn_local_api).await.unwrap_or_else(|_| Err("Engine startup failed".into())) {
     Ok(status) => status,
     Err(error) => desktop_status(Some(error)),
   }
@@ -510,6 +516,17 @@ fn desktop_pick_demo_file() -> Option<String> {
     .add_filter("Counter-Strike Demo", &["dem"])
     .pick_file()
     .map(|path| path.display().to_string())
+}
+
+#[tauri::command]
+async fn desktop_save_report(report: String) -> Result<bool, String> {
+  if report.len() > 1024 * 1024 { return Err("Report is too large".into()); }
+  tauri::async_runtime::spawn_blocking(move || {
+    let Some(path) = FileDialog::new().add_filter("Plain text report", &["txt"]).set_file_name("NullCS-report.txt").save_file() else { return Ok(false); };
+    if path.extension().and_then(|s| s.to_str()).map(|s| s.to_ascii_lowercase()) != Some("txt".into()) { return Err("Save the report as a .txt file".into()); }
+    fs::write(path, report).map_err(|_| "The report could not be saved. Choose another location.".to_string())?;
+    Ok(true)
+  }).await.map_err(|_| "Report save failed".to_string())?
 }
 
 fn allowed_external_url(url: &str) -> bool {
@@ -562,10 +579,63 @@ fn desktop_open_external_url(url: String) -> Result<bool, String> {
   }
 }
 
+
+#[derive(Default)]
+struct PendingUpdate(Mutex<Option<tauri_plugin_updater::Update>>);
+
+#[derive(Serialize)]
+struct UpdateStatus { configured: bool, version: Option<String>, notes: Option<String> }
+
+#[tauri::command]
+async fn desktop_check_update(app: tauri::AppHandle, pending: tauri::State<'_, PendingUpdate>) -> Result<UpdateStatus, String> {
+  let endpoint = option_env!("NULLCS_UPDATE_ENDPOINT").unwrap_or("");
+  let public_key = option_env!("NULLCS_UPDATE_PUBLIC_KEY").unwrap_or("");
+  if endpoint.is_empty() || public_key.is_empty() {
+    return Ok(UpdateStatus { configured: false, version: None, notes: None });
+  }
+  let url: tauri::Url = endpoint.parse().map_err(|_| "Invalid update endpoint")?;
+  if url.scheme() != "https" || url.host_str().is_none() || !url.username().is_empty() || url.password().is_some() {
+    return Err("Update checks require a trusted HTTPS endpoint".into());
+  }
+  let update = app.updater_builder().pubkey(public_key).endpoints(vec![url])
+    .map_err(|_| "Update configuration is invalid")?
+    .timeout(Duration::from_secs(20)).build().map_err(|_| "Update configuration is invalid")?
+    .check().await.map_err(|_| "Could not check for updates. You can retry when online.")?;
+  let status = UpdateStatus { configured: true, version: update.as_ref().map(|u| u.version.clone()), notes: update.as_ref().and_then(|u| u.body.clone()) };
+  *pending.0.lock().map_err(|_| "Update state unavailable")? = update;
+  Ok(status)
+}
+
+fn stop_local_api() {
+  if let Ok(mut guard) = local_api_child().lock() {
+    if let Some(mut child) = guard.take() {
+      #[cfg(target_os = "windows")]
+      {
+        let _ = Command::new("taskkill.exe").args(["/PID", &child.id().to_string(), "/T", "/F"])
+          .creation_flags(CREATE_NO_WINDOW).stdout(Stdio::null()).stderr(Stdio::null()).status();
+      }
+      let _ = child.kill();
+      let _ = child.wait();
+    }
+  }
+}
+
+#[tauri::command]
+async fn desktop_install_update(app: tauri::AppHandle, pending: tauri::State<'_, PendingUpdate>) -> Result<(), String> {
+  let update = pending.0.lock().map_err(|_| "Update state unavailable")?.take().ok_or("Check for updates first")?;
+  // Download verifies the signature before the engine is stopped or an installer runs.
+  let bytes = update.download(|_, _| {}, || {}).await.map_err(|_| "Update download or signature verification failed. Nothing was installed.")?;
+  stop_local_api();
+  update.install(bytes).map_err(|_| "Update installation failed. Restart NullCS and retry.")?;
+  app.restart();
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-  tauri::Builder::default()
-    .invoke_handler(tauri::generate_handler![desktop_service_status, desktop_service_start, desktop_pick_demo_file, desktop_open_external_url])
+  let app = tauri::Builder::default()
+    .plugin(tauri_plugin_updater::Builder::new().build())
+    .manage(PendingUpdate::default())
+    .invoke_handler(tauri::generate_handler![desktop_service_status, desktop_service_start, desktop_pick_demo_file, desktop_open_external_url, desktop_save_report, desktop_check_update, desktop_install_update])
     .setup(|app| {
       let resource_root = app.path().resource_dir().ok().and_then(|path| {
         let direct = path.join("nullcs-backend");
@@ -581,7 +651,10 @@ pub fn run() {
       let _ = PACKAGED_BACKEND_ROOT.set(resource_root);
       let data_root = app.path().app_data_dir().ok().map(|path| path.join("backend-data"));
       if let Some(path) = data_root.as_ref() {
-        let _ = fs::create_dir_all(path);
+        fs::create_dir_all(path)?;
+        let lock = OpenOptions::new().create(true).truncate(false).read(true).write(true).open(path.join("desktop.lock"))?;
+        lock.try_lock().map_err(|_| "NullCS is already running. Use the existing window.")?;
+        let _ = INSTANCE_LOCK.set(lock);
       }
       let _ = APP_DATA_DIR.set(data_root);
       if cfg!(debug_assertions) {
@@ -593,6 +666,38 @@ pub fn run() {
       }
       Ok(())
     })
-    .run(tauri::generate_context!())
-    .expect("error while running tauri application");
+    .build(tauri::generate_context!())
+    .expect("error while building tauri application");
+  app.run(|_, event| {
+    if matches!(event, tauri::RunEvent::Exit) { stop_local_api(); }
+  });
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  #[test]
+  fn hash_matches_known_sha256() {
+    let root = env::temp_dir().join(format!("nullcs-hash-{}", Uuid::new_v4()));
+    fs::create_dir(&root).unwrap();
+    let file = root.join("data"); fs::write(&file, b"abc").unwrap();
+    assert_eq!(certutil_sha256(&file).unwrap(), "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad");
+    fs::remove_dir_all(root).unwrap();
+  }
+  #[test]
+  fn model_cache_replaces_changed_artifacts() {
+    let root = env::temp_dir().join(format!("nullcs-cache-{}", Uuid::new_v4()));
+    let source = root.join("source"); let destination = root.join("destination");
+    fs::create_dir_all(&source).unwrap(); fs::create_dir_all(&destination).unwrap();
+    fs::write(source.join("model"), b"new").unwrap(); fs::write(destination.join("model"), b"old").unwrap();
+    copy_dir_missing(&source, &destination).unwrap();
+    assert_eq!(fs::read(destination.join("model")).unwrap(), b"new");
+    fs::remove_dir_all(root).unwrap();
+  }
+  #[test]
+  fn external_links_reject_untrusted_urls() {
+    assert!(allowed_external_url("https://steamcommunity.com/profiles/76561198000000000"));
+    assert!(!allowed_external_url("https://steamcommunity.com.evil.test/profiles/76561198000000000"));
+    assert!(!allowed_external_url("file:///C:/Windows/system32/cmd.exe"));
+  }
 }

@@ -10,22 +10,22 @@
 
 :root {
   --background: 220 31% 5%;
-  --foreground: 30 25% 96%;
+  --foreground: 210 30% 96%;
   --card: 222 24% 8%;
-  --card-foreground: 30 20% 96%;
+  --card-foreground: 210 30% 96%;
   --popover: 222 24% 8%;
-  --popover-foreground: 30 20% 96%;
-  --primary: 19 63% 56%;
-  --primary-foreground: 30 40% 96%;
+  --popover-foreground: 210 30% 96%;
+  --primary: 207 94% 69%;
+  --primary-foreground: 220 50% 8%;
   --secondary: 222 19% 11%;
-  --secondary-foreground: 30 18% 92%;
+  --secondary-foreground: 210 25% 92%;
   --muted: 220 17% 11%;
   --muted-foreground: 220 10% 67%;
   --accent: 222 19% 11%;
-  --accent-foreground: 30 18% 92%;
+  --accent-foreground: 210 25% 92%;
   --border: 220 16% 16%;
   --input: 220 16% 16%;
-  --ring: 20 70% 59%;
+  --ring: 207 94% 69%;
 }
 
 html {
@@ -35,7 +35,7 @@ html {
 body {
   min-height: 100vh;
   background:
-    radial-gradient(circle at top, rgba(146, 61, 27, 0.24), transparent 26%),
+    radial-gradient(circle at top, rgba(30, 107, 196, 0.20), transparent 26%),
     linear-gradient(180deg, #05070c 0%, #060910 30%, #05070b 100%);
   color: hsl(var(--foreground));
   font-family: "IBM Plex Sans", "Inter", sans-serif;
@@ -60,7 +60,7 @@ a {
 }
 
 ::selection {
-  background: rgba(217, 122, 74, 0.35);
+  background: rgba(72, 163, 255, 0.35);
   color: white;
 }
 
@@ -94,4 +94,25 @@ a {
     background-size: 56px 56px;
     opacity: 0.14;
   }
+}
+
+/* Cold metal highlights: static gradients, with movement handled by transforms. */
+.metallic-text {
+  color: #c8e6ff;
+  background: linear-gradient(125deg, #f4faff 8%, #a9d7ff 35%, #5da5e5 53%, #e5f4ff 75%, #7cbcf3 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.metallic-button {
+  border: 1px solid rgba(181, 226, 255, 0.6);
+  background-image: linear-gradient(165deg, #b9e4ff 0%, #69bbfa 42%, #4595de 55%, #88ceff 100%);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.5), 0 4px 24px rgba(35,135,230,.16);
+}
+.metallic-button:hover {
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.6), 0 8px 32px rgba(35,135,230,.3);
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition-duration: 0.01ms !important; }
+  .ambient-toggle { display: none; }
 }

@@ -16,7 +16,8 @@ from xgboost import XGBClassifier
 
 # Ensure "main/" is importable.
 MAIN_ROOT = Path(__file__).resolve().parents[1]
-sys.path = [p for p in sys.path if "ClarityCS\\main" not in str(p)]
+# Keep environment site-packages, including release venvs located under main/.
+# The explicit src bootstrap below handles source-package selection.
 if str(MAIN_ROOT) in sys.path:
     sys.path.remove(str(MAIN_ROOT))
 sys.path.insert(0, str(MAIN_ROOT))
@@ -46,6 +47,8 @@ from src.utils.scoring import (
 from src.utils.model_registry import resolve_model_artifacts
 from src.utils.project_paths import RAW_UPLOADS_ROOT
 from src.models.encounter_nn import (
+    INLINE_DEMO_ID_PREFIXES,
+    demo_id_loader_supported,
     encounter_infer_player_feature_path,
     encounter_model_artifacts,
     load_trained_encounter_model,
@@ -57,7 +60,17 @@ from src.models.encounter_nn import (
 def parse_args() -> argparse.Namespace:
     ap = argparse.ArgumentParser(description="Inference-only pipeline for one demo.")
     ap.add_argument("--dem_path", required=True, help="Path to input .dem file")
-    ap.add_argument("--demo_id", required=True, help="Demo ID, e.g. TEST_YYYYMMDD_HHMMSS_abcd1234")
+    ap.add_argument(
+        "--demo_id",
+        required=True,
+        help=(
+            "Demo ID. The temporal (encounter-NN) loader resolves only these prefixes directly: "
+            f"{', '.join(INLINE_DEMO_ID_PREFIXES)} - e.g. TEST_YYYYMMDD_HHMMSS_abcd1234, the desktop "
+            "app upload convention. Any other id is accepted only when "
+            "processed/demos/<demo_id>/meta.json points at an existing source demo, otherwise the "
+            "run is rejected before parsing."
+        ),
+    )
     ap.add_argument(
         "--out_dir",
         required=True,
@@ -261,10 +274,32 @@ def _selected_train_mode(models_dir: Path, model_artifact: str | None) -> tuple[
     return model_path, feats_path, train_mode
 
 
-def _build_demo_feature_frames_demoparser2(demo_file: Path, demo_id: str) -> tuple[pd.DataFrame, pd.DataFrame]:
+def _build_demo_feature_frames_demoparser2(
+    demo_file: Path, demo_id: str
+) -> tuple[pd.DataFrame, pd.DataFrame, dict[str, object]]:
+    print("[NULLCS_STAGE] parsing", flush=True)
     match = load_demoparser2_demo(demo_file, demo_id=demo_id)
+    print("[NULLCS_STAGE] feature_processing", flush=True)
     kill_df, encounter_df = cs2cd_build_mod.build_match_outputs(match)
-    return kill_df, encounter_df
+    provenance = dict(getattr(match, "parser_provenance", None) or {})
+    return kill_df, encounter_df, provenance
+
+
+def _validate_demo_id(demo_id: str) -> None:
+    """Fail fast on a --demo_id the temporal (encounter-NN) loader cannot resolve.
+
+    Fixes the late failure mode where parsing and feature-building completed first and
+    only encounter scoring raised "Unsupported demo source for temporal model", after a
+    full demo parse. The accepted set mirrors src/models/encounter_nn.py.
+    """
+    if demo_id_loader_supported(demo_id):
+        return
+    raise ValueError(
+        f"Unsupported --demo_id '{demo_id}': the temporal (encounter-NN) loader resolves only "
+        f"{', '.join(INLINE_DEMO_ID_PREFIXES)} directly (e.g. TEST_YYYYMMDD_HHMMSS_abcd1234), "
+        "or an id whose processed/demos/<demo_id>/meta.json points at an existing source demo. "
+        "Refusing to run: parsing would succeed and then fail late in encounter scoring."
+    )
 
 
 def _package_version(name: str) -> str | None:
@@ -514,6 +549,7 @@ def main() -> int:
     processed_root = Path(args.out_dir)
     if not demo_id:
         raise ValueError("demo_id cannot be empty")
+    _validate_demo_id(demo_id)
 
     raw_uploads_root = Path(
         os.environ.get("NULLCS_UPLOAD_DIR")
@@ -535,24 +571,35 @@ def main() -> int:
     if train_mode != "cs2cd":
         print(f"[WARN] model train_mode={train_mode}; demo will still be parsed with demoparser2-local for schema parity")
 
-    kill_df, encounter_df = _build_demo_feature_frames_demoparser2(demo_file, demo_id=demo_id)
-    print("[INFO] parsed demo with demoparser2-local")
+    kill_df, encounter_df, parser_provenance = _build_demo_feature_frames_demoparser2(
+        demo_file, demo_id=demo_id
+    )
+    print(
+        "[INFO] parsed demo with demoparser2-local "
+        f"(patch_version={parser_provenance.get('patch_version', 'unknown')}, "
+        f"demoparser2={parser_provenance.get('demoparser2_version', 'unknown')})"
+    )
 
     demo_dir = demos_root / demo_id
     demo_dir.mkdir(parents=True, exist_ok=True)
     eng_path = demo_dir / "engagement_features.parquet"
     encounter_path = demo_dir / "encounters.parquet"
+    provenance_path = demo_dir / "parser_provenance.json"
     _write_table(kill_df, eng_path)
     _write_table(encounter_df, encounter_path)
+    provenance_path.write_text(json.dumps(parser_provenance, indent=2), encoding="utf-8")
     print(f"[OK] wrote {eng_path}")
     print(f"[OK] wrote {encounter_path}")
+    print(f"[OK] wrote {provenance_path}")
 
     player_df = _build_player_features_for_demo(eng_path, demo_id=demo_id, encounter_path=encounter_path)
+    print("[NULLCS_STAGE] inference", flush=True)
     player_df = _merge_encounter_nn_features_for_demo(player_df, encounter_df, processed_root, train_mode)
     per_demo_player_path = demo_dir / "player_features_infer.parquet"
     player_df.to_parquet(per_demo_player_path, index=False)
     print(f"[OK] wrote {per_demo_player_path}")
 
+    print("[NULLCS_STAGE] scoring", flush=True)
     infer_ranked, debug_trace = _infer_scores(player_df, processed_root=processed_root, model_artifact=args.model_artifact)
     per_demo_report_dir = reports_root / demo_id
     per_demo_report_dir.mkdir(parents=True, exist_ok=True)
@@ -568,7 +615,11 @@ def main() -> int:
         "demo_file": str(demo_file),
         "zip_path": "",
         "parser_mode": parser_mode,
-        "demoparser2_version": _package_version("demoparser2"),
+        "demoparser2_version": parser_provenance.get("demoparser2_version") or _package_version("demoparser2"),
+        "patch_version": parser_provenance.get("patch_version"),
+        "demo_version_name": parser_provenance.get("demo_version_name"),
+        "parser_provenance": parser_provenance,
+        "parser_provenance_path": str(provenance_path),
         "parse_warning": parse_warning,
         "engagement_features": str(eng_path),
         "encounters": str(encounter_path),

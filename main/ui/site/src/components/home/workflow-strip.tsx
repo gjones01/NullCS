@@ -16,7 +16,7 @@ export function WorkflowStrip() {
           <Reveal key={item.step} delay={index * 0.06}>
             <HoverPanel>
               <div className="relative overflow-hidden rounded-[1.75rem] border border-white/10 bg-[#0a0d14] p-6">
-                <div className="absolute left-0 top-0 h-1 w-full bg-[linear-gradient(90deg,rgba(217,122,74,0.9),rgba(217,122,74,0))] animate-pulse-line" />
+                <div className="absolute left-0 top-0 h-1 w-full bg-[linear-gradient(90deg,rgba(72,163,255,0.9),rgba(72,163,255,0))] animate-pulse-line" />
                 <div className="text-[0.72rem] uppercase tracking-[0.22em] text-zinc-500">{item.step}</div>
                 <div className="mt-6 flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.03]">
                   <item.icon className="h-4 w-4 text-zinc-200" />

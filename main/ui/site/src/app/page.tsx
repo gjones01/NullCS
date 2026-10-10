@@ -1,15 +1,17 @@
-import { Hero } from "@/components/home/hero";
-import { ProofGrid } from "@/components/home/proof-grid";
-import { ResearchCta } from "@/components/home/research-cta";
-import { ReviewPipeline } from "@/components/home/review-pipeline";
+import { CinematicExperience } from "@/components/cinematic/experience";
+import sample from "../../public/assets/observatory/encounter-sample.json";
 
 export default function HomePage() {
   return (
     <>
-      <Hero />
-      <ReviewPipeline />
-      <ProofGrid />
-      <ResearchCta />
+      <noscript>
+        <style>
+          {
+            ".pipeline-sequence{height:auto}.pipeline-sticky{position:relative;top:0}"
+          }
+        </style>
+      </noscript>
+      <CinematicExperience channels={sample.channels} />
     </>
   );
 }

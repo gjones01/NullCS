@@ -1,0 +1,24 @@
+# Build from repository root: docker build -f main/ui/api/Dockerfile.worker .
+FROM python:3.13-slim
+ENV PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1 \
+    NULLCS_ENV=production NULLCS_WEB_ANALYSIS=1 NULLCS_DEMO_MODE=0 \
+    NULLCS_PROJECT_ROOT=/app CLARITY_PYTHON_EXE=/usr/local/bin/python \
+    NULLCS_UPLOAD_DIR=/data/uploads CLARITY_PROCESSED_DIR=/data/processed \
+    NULLCS_WEB_STATE_DIR=/data/state
+WORKDIR /app
+RUN apt-get update && apt-get install -y --no-install-recommends libgomp1 \
+    && rm -rf /var/lib/apt/lists/*
+COPY main/ui/api/requirements*.txt /tmp/
+RUN pip install --no-cache-dir -r /tmp/requirements-worker.txt
+COPY main/src /app/main/src
+COPY main/scripts /app/main/scripts
+COPY main/ui/api /app/main/ui/api
+RUN touch /app/.nullcs-backend-root \
+    && useradd --uid 10001 --create-home nullcs \
+    && mkdir -p /data/uploads /data/processed /data/state \
+    && chown -R nullcs:nullcs /data
+USER nullcs
+VOLUME ["/data"]
+EXPOSE 8000
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s CMD python -c "import os,urllib.request,json; r=urllib.request.Request('http://127.0.0.1:8000/api/health',headers={'X-NULLCS-KEY':os.environ['NULLCS_API_KEY']}); assert json.load(urllib.request.urlopen(r,timeout=4))['upload_enabled']"
+CMD ["python", "-m", "uvicorn", "main.ui.api.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1", "--no-proxy-headers", "--timeout-graceful-shutdown", "15"]

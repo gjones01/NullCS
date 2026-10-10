@@ -1,3 +1,4 @@
+import { Reveal } from "@/components/ui/reveal";
 import { cn } from "@/lib/utils";
 
 type SectionShellProps = {
@@ -20,13 +21,14 @@ export function SectionShell({
   return (
     <section id={id} className={cn("relative py-20 sm:py-28", className)}>
       <div className="container">
-        <div className="max-w-3xl">
+        <Reveal className="max-w-3xl">
+          <div aria-hidden="true" className="mb-7 h-px w-20 bg-gradient-to-r from-primary to-transparent" />
           {eyebrow ? (
             <div className="mb-5 text-[0.72rem] uppercase tracking-[0.28em] text-zinc-500">{eyebrow}</div>
           ) : null}
           <h2 className="font-display text-3xl tracking-[-0.04em] text-white sm:text-5xl">{title}</h2>
           {description ? <p className="mt-5 max-w-2xl text-base leading-7 text-zinc-400 sm:text-lg">{description}</p> : null}
-        </div>
+        </Reveal>
         <div className="mt-12">{children}</div>
       </div>
     </section>

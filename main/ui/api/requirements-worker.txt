@@ -1,0 +1,3 @@
+# Preserve the verified runtime pins. joblib is imported directly by saved model loaders.
+-r requirements.txt
+joblib==1.5.3

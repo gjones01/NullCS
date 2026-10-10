@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 import sys
@@ -32,6 +32,12 @@ class CS2CDMatch:
     damages: pd.DataFrame
     shots: pd.DataFrame
     rounds: pd.DataFrame
+    # Parser provenance (patch_version, demo_version_name, demoparser2 version) for
+    # demoparser2-backed matches. Empty for CS2CD dataset matches, which are already
+    # parsed upstream and never touch a parser. run_infer_pipeline.py stamps this
+    # into the per-demo infer artifacts so a stored score can be traced back to the
+    # parser + CS2 patch that produced it.
+    parser_provenance: dict[str, Any] = field(default_factory=dict)
 
 
 def list_match_ids(split: str) -> list[str]:

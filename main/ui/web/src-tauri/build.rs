@@ -20,9 +20,14 @@ fn certutil_sha256(path: &Path) -> Option<String> {
 }
 
 fn main() {
+  println!("cargo:rerun-if-env-changed=NULLCS_UPDATE_ENDPOINT");
+  println!("cargo:rerun-if-env-changed=NULLCS_UPDATE_PUBLIC_KEY");
   let manifest = Path::new("resources").join("nullcs-backend").join("backend_manifest.json");
   println!("cargo:rerun-if-changed={}", manifest.display());
   let hash = certutil_sha256(&manifest).unwrap_or_default();
+  if std::env::var("PROFILE").as_deref() == Ok("release") && hash.len() != 64 {
+    panic!("Prepare the backend resources before building a release");
+  }
   println!("cargo:rustc-env=NULLCS_BACKEND_MANIFEST_SHA256={hash}");
   tauri_build::build()
 }

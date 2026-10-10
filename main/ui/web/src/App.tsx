@@ -1733,7 +1733,7 @@ function App() {
       const requestedDemoId = caseLabel.trim() || undefined;
       if (desktopStatus?.is_desktop && desktopDemoPath) {
         if (!desktopDemoPath.toLowerCase().endsWith(".dem")) throw new Error("Only .dem files are accepted.");
-        const queued = await queueLocalDemoPath(desktopDemoPath, requestedDemoId);
+        const queued = await queueLocalDemoPath(desktopDemoPath);
         nextDemoId = queued.demo_id;
         originalFilename = queued.original_filename || desktopDemoPath.split(/[\\/]/).pop() || "Selected Demo";
       } else {

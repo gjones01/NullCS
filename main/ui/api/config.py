@@ -14,9 +14,6 @@ PROJECT_ROOT = Path(__file__).resolve().parents[3]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from main.src.utils.project_paths import REPO_ROOT
-
-
 def _load_local_env() -> None:
     if load_dotenv is None:
         return
@@ -30,6 +27,9 @@ def _load_local_env() -> None:
 
 
 _load_local_env()
+
+# Shared path constants must see .env overrides before their first import.
+from main.src.utils.project_paths import REPO_ROOT
 
 PROJECT_ROOT = Path(os.getenv("NULLCS_PROJECT_ROOT", os.getenv("CLARITY_PROJECT_ROOT", str(REPO_ROOT))))
 DEFAULT_VENV_PYTHON = PROJECT_ROOT / "NewAnubisTri" / ".venv" / "Scripts" / "python.exe"
@@ -92,6 +92,14 @@ JOBS_PATH = STATE_DIR / "jobs.json"
 
 REPORTS_DIR = PROCESSED_DIR / "reports"
 INFER_CSV = REPORTS_DIR / "ranked_player_demo_suspicion_infer.csv"
+
+# Opt-in website worker. Models and scoring selection retain their existing semantics.
+WEB_ANALYSIS = os.getenv("NULLCS_WEB_ANALYSIS", "0").lower() in {"1", "true", "yes"}
+WEB_MAX_UPLOAD_BYTES = int(os.getenv("NULLCS_WEB_MAX_UPLOAD_BYTES", str(1024 ** 3)))
+WEB_UPLOAD_TIMEOUT_SECONDS = int(os.getenv("NULLCS_WEB_UPLOAD_TIMEOUT_SECONDS", "1800"))
+WEB_MAX_PENDING_JOBS = int(os.getenv("NULLCS_WEB_MAX_PENDING_JOBS", "8"))
+WEB_MIN_FREE_BYTES = int(os.getenv("NULLCS_WEB_MIN_FREE_BYTES", str(2 * 1024 ** 3)))
+WEB_STATE_DIR = Path(os.getenv("NULLCS_WEB_STATE_DIR", str(PROCESSED_DIR.parent / "web_state")))
 
 
 def model_version_label() -> str:

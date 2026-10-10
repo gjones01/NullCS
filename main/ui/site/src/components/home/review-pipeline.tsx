@@ -40,7 +40,7 @@ export function ReviewPipeline() {
               <HoverPanel>
                 <article className="grid gap-5 rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-5 sm:grid-cols-[auto_1fr]">
                   <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-[#11141d]">
-                    <step.icon className="h-5 w-5 text-[#d97a4a]" />
+                    <step.icon className="h-5 w-5 text-[#65baff]" />
                   </div>
                   <div>
                     <div className="text-[0.7rem] uppercase tracking-[0.22em] text-zinc-500">{step.label}</div>

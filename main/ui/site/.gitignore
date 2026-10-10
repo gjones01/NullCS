@@ -1,3 +1,8 @@
 .next
 node_modules
 .env.local
+
+.vercel
+
+# Original editing source; website serves the silent MP4.
+public/assets/observatory/NullCS BRoll.mov
