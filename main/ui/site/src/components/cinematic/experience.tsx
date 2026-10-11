@@ -293,7 +293,7 @@ export function CinematicExperience({ channels }: { channels: Channel[] }) {
           </p>
         </div>
         <div className="signal-footnote">
-          <span>INPUT â†’ RESPONSE â†’ CONTEXT</span>
+          <span>INPUT &rarr; RESPONSE &rarr; CONTEXT</span>
           <p>
             Timing. Aim process. Movement. Visibility.
             <br />
@@ -432,7 +432,7 @@ export function CinematicExperience({ channels }: { channels: Channel[] }) {
           </h2>
           <p>
             Grouped evaluation separates matches across folds. The published
-            benchmark measures ranking behavior within its datasetâ€”not a
+            benchmark measures ranking behavior within its dataset, not a
             guarantee about your next match.
           </p>
         </div>
