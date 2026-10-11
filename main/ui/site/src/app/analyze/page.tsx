@@ -71,7 +71,8 @@ export default function AnalyzePage() {
           <dt>02 / Results you can read</dt>
           <dd>
             Review order, model score, and calibrated estimate are presented
-            separately. Save a plain-text report with a built-in score guide.
+            separately. Compare players with interactive score and benchmark
+            charts, then save a plain-text report with a score guide.
           </dd>
         </div>
         <div>
@@ -91,9 +92,10 @@ export default function AnalyzePage() {
       </dl>
       <p className="release-note">
         <strong>Research beta.</strong> Models will continue to improve with
-        newer data. Rankings are signals for human review, not cheating
-        verdicts. The known parser and calibration limitations remain documented
-        in the application.
+        newer data. Some matches show clear cheating behavior; others need
+        encounter context and evidence from more matches. This build analyzes
+        one demo at a time. Comparing a player across multiple demos is a planned
+        research direction.
       </p>
       <a
         className="text-link"

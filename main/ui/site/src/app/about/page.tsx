@@ -21,9 +21,10 @@ export default function AboutPage() {
         <em>a closer look.</em>
       </h1>
       <p className="subpage-intro">
-        NullCS investigates whether structured Counter-Strike 2 demo data can
-        surface behavioral anomalies for review. The goal is an inspectable
-        starting point, with uncertainty kept in view.
+        NullCS is an end-to-end data science project for Counter-Strike 2:
+        replay parsing, behavioral feature engineering, temporal modeling,
+        player ranking, and a local desktop application. It turns match telemetry
+        into a ranked list of players for replay review.
       </p>
       <div className="research-chapter" style={{ marginTop: 70 }}>
         <div>
@@ -48,8 +49,8 @@ export default function AboutPage() {
           </p>
           <p>
             Timing, visibility, aim correction, movement pressure, and input
-            behavior are considered in context. Individual measurements are
-            insufficient to establish a cheating conclusion.
+            behavior provide complementary signals. The report separates the
+            raw model output, calibrated estimate, and evidence-adjusted review score.
           </p>
           <Link className="text-link" href="/#pipeline">
             Explore the process <ArrowUpRight size={16} />
@@ -111,18 +112,24 @@ export default function AboutPage() {
       <div className="research-chapter">
         <div>
           <span className="technical-label">03 / INTERPRETATION</span>
-          <h2>Signals have limits.</h2>
+          <h2>Interpret the evidence.</h2>
         </div>
         <div>
           <p>
-            False positives exist, including in strong legitimate play. A high
-            ranking is a reason to inspect a replay, not evidence of a specific
-            cheat or a recommendation to ban a player.
+            Some replays show clear cheating behavior. Other cases need encounter
+            context: visibility, timing, player skill, and what information was
+            available. Strong model signals focus that review; false positives
+            and missed cases are measured in the evaluation.
           </p>
           <p>
             Review score, raw model score, and calibrated probability are
             different concepts. Some model selections lack calibration;
             estimates from labeled data may not generalize to a new match.
+          </p>
+          <p>
+            Next research direction: compare the same player across multiple
+            demos, measuring whether unusual behavior repeats. The current app
+            processes one demo at a time; player-history analysis is not yet available.
           </p>
           <p>
             The verified demoparser2 0.41.4 runtime has a known stale

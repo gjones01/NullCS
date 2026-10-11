@@ -1,6 +1,6 @@
 [package]
 name = "nullcs-desktop"
-version = "0.1.0-beta.1"
+version = "0.1.0-beta.2"
 description = "NullCS desktop beta client"
 authors = ["NullCS"]
 license = "GPL-3.0-only"

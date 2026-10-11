@@ -169,8 +169,8 @@ export function CinematicExperience({ channels }: { channels: Channel[] }) {
             the <span>score.</span>
           </h1>
           <p className="hero-description">
-            An independent study of the behavior
-            <br className="desktop-break" /> beneath Counter-Strike 2 gameplay.
+            Machine learning for Counter-Strike 2 telemetry.
+            <br className="desktop-break" /> From replay data to player-level behavioral analysis.
           </p>
           <Link className="instrument-button" href="/analyze">
             Get the desktop app <ArrowUpRight size={18} />
@@ -451,9 +451,9 @@ export function CinematicExperience({ channels }: { channels: Channel[] }) {
           <div>
             <h3>Follow the methodology.</h3>
             <p>
-              Examine the feature contract, model pipeline, benchmark context,
-              and known limitations. The point is to make behavior
-              inspectableâ€”not to hide uncertainty behind a score.
+              Trace the work from telemetry to 449 player-level features,
+              temporal encounter modeling, and gradient boosting. Inspect
+              grouped evaluation, calibration, and documented failure cases.
             </p>
           </div>
           <Link className="text-link" href="/about">
@@ -501,15 +501,17 @@ export function CinematicExperience({ channels }: { channels: Channel[] }) {
           <span>THE HUMAN STAYS IN THE LOOP</span>
         </div>
         <p className="closing-statement">
-          A signal to look closer.
+          Measure the behavior.
           <br />
-          <span>Never a verdict.</span>
+          <span>Examine the evidence.</span>
         </p>
         <div className="closing-bottom">
           <p>
-            False positives exist. Parser changes matter. Calibrated estimates
-            have limits. NullCS is independent behavioral researchâ€”not an
-            anticheat or an automated ban system.
+            Some matches show clear cheating behavior. Others require encounter
+            context and evidence across matches. NullCS measures behavioral
+            signals, ranks players, and shows score and benchmark context.
+            Multi-demo player analysis is a planned research direction; the
+            current app processes one demo at a time.
           </p>
           <div>
             <Link href="/analyze" className="instrument-button">

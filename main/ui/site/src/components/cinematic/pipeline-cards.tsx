@@ -23,7 +23,7 @@ const panels = [
   },
   {
     title: "PLAYER-LEVEL SIGNALS",
-    note: "Actual within-lobby percentiles / illustrative player, not a verdict",
+    note: "Actual within-lobby percentiles / illustrative player comparison",
   },
   {
     title: "RANKED FOR REVIEW",

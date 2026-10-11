@@ -5,17 +5,21 @@ import { isDesktopShell, startDesktopService, pickDesktopDemoFile } from './desk
 import { setApiAccessToken, setApiBaseUrl, getApiAccessToken, getApiBaseUrl } from './runtimeConfig';
 import { getHealth, getStatus, queueLocalDemoPath, type DemoStatus } from './lib/api';
 import { DesktopAtmosphere } from './components/DesktopAtmosphere';
+import { ReportCharts } from './components/ReportCharts';
+import reference from './lib/score-reference.json';
+import { signalBand, bandLabels } from './lib/report-context';
 import './desktop.css';
 
 type Player = { rank: number; steamid: string; name: string; review_score: number; model_score: number; calibrated_probability: number | null; confidence: number | null };
 type Result = { schema_version: string; job_id: string; filename: string; map_name: string; players: Player[]; warnings: string[]; model: { name: string; sha256: string; calibration_used: boolean }; parser_version: string };
 type Update = { configured: boolean; version: string | null; notes: string | null };
 const glossary = [
-  ['Review score', 'How strongly the model suggests reviewing this player, after its existing evidence adjustments. It is not a chance of cheating.'],
-  ['Rank', 'The order to review players in this match. Number 1 comes first; it is not a verdict.'],
-  ['Model score', 'The original model output before calibration and evidence adjustments. Higher means more unusual to the model.'],
+  ['Review score', 'The score used to order players, after calibration when available and adjustments for limited evidence.'],
+  ['Rank', 'The order to review players in this match. Number 1 has the highest review score.'],
+  ['Model score', 'The original model output. Higher scores indicate a closer match to patterns learned from positively labeled examples.'],
   ['Calibrated estimate', 'A model estimate adjusted using labeled data. It may not transfer reliably to your match. A dash means this model has no calibration.'],
-  ['Evidence confidence', 'How much support the scoring system found for its result. It is not certainty that a player cheated.'],
+  ['Evidence confidence', 'How much usable evidence supports the score. Sparse encounters can limit the assessment.'],
+  ['Signal color', 'Green: below 20. Yellow: 20 to below 50. Red: 50 or above. These tested raw-score cutoffs help prioritize review; inspect the distribution to see their tradeoffs.'],
 ] as const;
 const score = (value: number | null) => value === null || !Number.isFinite(value) ? '-' : (value * 100).toFixed(1);
 const message = (error: unknown) => error instanceof Error ? error.message : String(error);
@@ -82,7 +86,7 @@ export default function DesktopApp() {
     setChecking(true); setUpdateMessage('Checking for updates...');
     try {
       const next = await invoke<Update>('desktop_check_update'); setUpdate(next);
-      setUpdateMessage(!next.configured ? 'Updates are not configured in this development build.' : next.version ? `Version ${next.version} is available.` : 'You have the latest available release.');
+      setUpdateMessage(!next.configured ? 'Automatic updates are not configured in this beta. New installers are available through GitHub Releases.' : next.version ? `Version ${next.version} is available.` : 'You have the latest available release.');
     } catch { setUpdateMessage('Update check unavailable. Try again when online.'); }
     finally { setChecking(false); }
   }
@@ -153,8 +157,9 @@ export default function DesktopApp() {
     if (!result) return;
     chime();
     const lines = ['NULLCS - MATCH REVIEW', result.filename, `Map: ${result.map_name}`, '',
-      'Research signals for human review. Not a cheating verdict.', '',
-      ...result.players.map(p => `#${p.rank} ${p.name} (${p.steamid})\n  Review score: ${score(p.review_score)}/100 | Model score: ${score(p.model_score)}/100 | Calibrated estimate: ${score(p.calibrated_probability)}${p.calibrated_probability === null ? '' : '%'} | Evidence confidence: ${score(p.confidence)}/100`),
+      'Some matches show clear cheating behavior. Others require a closer look at encounters, match context, and repeated behavior across demos.', '',
+      ...result.players.map(p => `#${p.rank} ${p.name} (${p.steamid})\n  ${bandLabels[signalBand(p.model_score, result.model.sha256 === reference.model_sha256)]} | Review score: ${score(p.review_score)}/100 | Model score: ${score(p.model_score)}/100 | Calibrated estimate: ${score(p.calibrated_probability)}${p.calibrated_probability === null ? '' : '%'} | Evidence confidence: ${score(p.confidence)}/100`),
+      '', 'REFERENCE CONTEXT', result.model.sha256 === reference.model_sha256 ? 'Historical grouped evaluation: 6,886 player-match records, 860 demos. At raw score >= 50/100: 846 true positives, 301 false positives, 146 false negatives. Display bands do not change scores. Interactive distributions are available inside the app.' : 'No matching benchmark reference is bundled for this model.',
       '', 'HOW TO READ THIS REPORT', ...glossary.map(([term, definition]) => `${term}: ${definition}`), '', 'LIMITATIONS', ...result.warnings,
       '', `Model: ${result.model.name}`, `Model SHA-256: ${result.model.sha256}`, `Parser: ${result.parser_version || 'Not recorded'}`, `Analysis: ${result.job_id}`];
     try { await invoke<boolean>('desktop_save_report', { report: lines.join('\n') }); }
@@ -188,9 +193,10 @@ export default function DesktopApp() {
       </section>
       {result && <section className="glass results" aria-labelledby="results-title"><div className="result-heading"><div><p className="eyebrow">03 / MATCH REPORT</p><h2 id="results-title">Start your review here.</h2><p>{result.filename}  /  {result.map_name}  /  {result.players.length} players</p></div><button className="primary" onClick={exportReport}>Save simple report</button></div>
         <div className="table-scroll"><table><thead><tr><th>Review order</th><th>Player</th><th><a href="#legend">Review score</a></th><th>Model score</th><th>Calibrated estimate</th></tr></thead><tbody>{result.players.map(p => <tr key={p.steamid}><td><span className="rank">{String(p.rank).padStart(2, '0')}</span></td><td>{p.name}<small>{p.steamid}</small></td><td><b>{score(p.review_score)}</b><span className="out-of"> / 100</span></td><td>{score(p.model_score)}<span className="out-of"> / 100</span></td><td>{score(p.calibrated_probability)}{p.calibrated_probability !== null && '%'}</td></tr>)}</tbody></table></div>
+        <ReportCharts key={result.job_id} players={result.players} modelHash={result.model.sha256} />
         <details><summary>Result limitations and model details</summary><ul>{result.warnings.map(w => <li key={w}>{w}</li>)}</ul><p>Model: {result.model.name}  /  Parser: {result.parser_version || 'Not recorded'}</p></details>
       </section>}
-      <section id="legend" className="legend"><div><p className="eyebrow">PLAIN ENGLISH</p><h2>What am I looking at?</h2><p>A starting point for watching the replay.<br />A high score alone proves nothing.</p></div><dl>{glossary.map(([term, definition]) => <div key={term}><dt>{term}</dt><dd>{definition}</dd></div>)}</dl></section>
+      <section id="legend" className="legend"><div><p className="eyebrow">READING THE RESULTS</p><h2>Score, evidence, context.</h2><p>Some matches show clear cheating behavior. Others require a closer look at encounters, match context, and repeated behavior across demos.</p><p>Planned research: compare a player across multiple demos to separate isolated events from recurring patterns. This build analyzes one demo at a time.</p></div><dl>{glossary.map(([term, definition]) => <div key={term}><dt>{term}</dt><dd>{definition}</dd></div>)}</dl></section>
       <footer id="client-updates" className="glass update-panel"><div><b>Keep your parser current.</b><p>{updateMessage || 'Client updates include tested parser, dependency, and model changes.'}</p>{update?.version && <p className="release-notes">{update.notes}</p>}</div><div className="button-row"><button disabled={checking || updating} onClick={() => void checkUpdate()}>Check for updates</button>{update?.version && <button className="primary" disabled={busy || updating} onClick={async () => { setUpdating(true); setUpdateMessage('Downloading and verifying the update. NullCS will close to install.'); try { await invoke('desktop_install_update'); } catch { setUpdateMessage('Update failed. Nothing unverified was installed; check again to retry.'); setUpdating(false); void boot(); } }}>{updating ? 'Updating...' : busy ? 'Finish analysis to update' : 'Update and restart'}</button>}</div></footer>
     </main><div className="bottom-note">NULLCS / BEHAVIORAL RESEARCH  /  LOCAL FIRST</div>
   </div>;

@@ -25,7 +25,7 @@ export const navItems = [
 export const heroMetrics = [
   { label: "Dataset", value: "894 demos and 281,792 encounter windows in the current public benchmark" },
   { label: "Features", value: "35 temporal CNN channels plus 449 player-demo ranking features" },
-  { label: "Output", value: "Ranked review signals with reasons, not verdicts or ban decisions" },
+  { label: "Output", value: "Ranked players, model scores, and behavioral evidence for replay review" },
 ] as const;
 
 export const benchmarkStats = [
