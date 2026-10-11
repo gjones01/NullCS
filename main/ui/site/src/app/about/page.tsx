@@ -44,13 +44,18 @@ export default function AboutPage() {
           </p>
           <p>
             The player-level feature contract contains 449 features. Training
-            and inference share aggregation logic. Grouped evaluation uses demo
-            IDs to separate matches across folds.
+            and inference share aggregation logic. Five-fold grouped evaluation
+            uses demo IDs to keep matches separate across player-model folds.
           </p>
           <p>
             Timing, visibility, aim correction, movement pressure, and input
             behavior provide complementary signals. The report separates the
             raw model output, calibrated estimate, and evidence-adjusted review score.
+          </p>
+          <p>
+            The parser rejects missing required model inputs. Inference records
+            model and parser provenance, making version changes and input failures
+            traceable when CS2 updates.
           </p>
           <Link className="text-link" href="/#pipeline">
             Explore the process <ArrowUpRight size={16} />
@@ -72,6 +77,12 @@ export default function AboutPage() {
             filtering, with 992 positive and 5,894 negative player-demo rows.
             Retrieval figures refer to 293 demos containing a suspicious-player
             label.
+          </p>
+          <p>
+            Historical player-model out-of-fold predictions yield average
+            precision of 0.805 and ROC-AUC of 0.959. Threshold tables expose the
+            tradeoff between finding labeled cases and raising false alarms;
+            score distributions show where the labeled groups overlap.
           </p>
           <p>
             These measurements describe this dataset and evaluation procedure.
