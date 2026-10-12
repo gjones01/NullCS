@@ -280,6 +280,8 @@ em {
   color: #ffffff03;
   white-space: nowrap;
   z-index: -1;
+  /* Selection paints this near-invisible wordmark solid white. */
+  user-select: none;
 }
 .hero-instrument {
   position: absolute;
@@ -908,6 +910,8 @@ em {
   margin: 65px -1vw 35px;
   color: #76836d;
   position: relative;
+  /* Selection replaces this olive wordmark with solid white. */
+  user-select: none;
 }
 .footer-wordmark span {
   font:
