@@ -5,44 +5,44 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowDown, ArrowUpRight, ArrowRight, Pause, Play } from "lucide-react";
 import { InstrumentScene } from "./scene";
 import { PipelineCards } from "./pipeline-cards";
-import { githubUrl, benchmarkStats } from "@/lib/site-content";
+import { githubUrl, projectFacts } from "@/lib/site-content";
 
 const stages = [
   {
     title: "A match becomes a record.",
     short: "Demo",
     code: ".DEM / INPUT",
-    body: "Start with a real Counter-Strike 2 replay. The demo contains the match history the pipeline will examine.",
+    body: "Choose a Counter-Strike 2 demo file: a saved replay containing the actions from a match.",
   },
   {
     title: "Every action has context.",
-    short: "Telemetry",
-    code: "TICKS / EVENTS",
-    body: "Parse player state, view angles, input, shots, damage, and visibility. Preserve timing before looking for patterns.",
+    short: "Match data",
+    code: "ACTIONS / TIMING",
+    body: "Read where players moved, where they aimed, when they fired, and what they could see.",
   },
   {
     title: "Isolate the encounter.",
-    short: "Windows",
-    code: "32 TICKS / SEQUENCE",
-    body: "Build encounter windows around player interactions. The temporal model reads a sequence, rather than one isolated moment.",
+    short: "Encounters",
+    code: "BEFORE / DURING / AFTER",
+    body: "Look at short sequences around player encounters, including what happened before and after the action.",
   },
   {
     title: "Read behavior over time.",
-    short: "Temporal model",
-    code: "CNN / ENCOUNTER",
-    body: "The temporal neural network evaluates how behavior develops across an encounter. Its outputs become part of the player-level representation.",
+    short: "Patterns",
+    code: "BEHAVIOR OVER TIME",
+    body: "A model trained on gameplay data looks for patterns in how aim, movement, and timing change during an encounter.",
   },
   {
     title: "Bring the signals together.",
-    short: "Aggregation",
-    code: "449 FEATURES / XGBOOST",
-    body: "Shared aggregation combines encounter and behavioral features. Gradient-boosted models produce the existing player-level scores.",
+    short: "Player summary",
+    code: "AIM / TIMING / MOVEMENT",
+    body: "Combine measurements from a player’s encounters to build a picture of their behavior across the match.",
   },
   {
     title: "Give the reviewer a starting point.",
     short: "Review",
     code: "RANKED PLAYERS / OUTPUT",
-    body: "Rank players within the match. Keep model scores, calibrated estimates, and review priority distinct. A person makes the judgment.",
+    body: "See which players the model puts first for replay review. Use the scores and match context to decide what to examine.",
   },
 ] as const;
 type Channel = { key: string; label: string; unit: string; values: number[] };
@@ -169,8 +169,8 @@ export function CinematicExperience({ channels }: { channels: Channel[] }) {
             the <span>score.</span>
           </h1>
           <p className="hero-description">
-            Machine learning for Counter-Strike 2 telemetry.
-            <br className="desktop-break" /> From replay data to player-level behavioral analysis.
+            Find unusual player behavior in your CS2 replays.
+            <br className="desktop-break" /> Open a demo. Compare players. Know where to look.
           </p>
           <Link className="instrument-button" href="/analyze">
             Get the desktop app <ArrowUpRight size={18} />
@@ -178,7 +178,7 @@ export function CinematicExperience({ channels }: { channels: Channel[] }) {
         </div>
         <div className="hero-bottom">
           <a href="#signals" className="scroll-cue">
-            <ArrowDown size={16} /> ENTER THE OBSERVATORY
+            <ArrowDown size={16} /> SEE HOW IT WORKS
           </a>
           <button
             className="motion-control"
@@ -207,9 +207,9 @@ export function CinematicExperience({ channels }: { channels: Channel[] }) {
             between <em>moments.</em>
           </h2>
           <p>
-            A flick is one moment. How the crosshair arrives, settles, and
-            responds is a sequence. NullCS studies the structure around player
-            interactions.
+            A fast flick tells only part of the story. NullCS looks at how
+            the crosshair moves, when a player fires, and what they could see
+            before the shot.
           </p>
         </div>
         <div className="signal-console">
@@ -284,18 +284,17 @@ export function CinematicExperience({ channels }: { channels: Channel[] }) {
             </div>
           </div>
           <p className="data-caption">
-            Actual encounter summaries from the local validation demo. Each 3D
-            trace is scaled independently for legibility; it is not a detection
-            result.{" "}
+            Real measurements from a test replay. Each line uses its own scale
+            so you can see its shape; these lines are not player scores.{" "}
             <a href="/assets/observatory/encounter-sample.json">
-              Inspect source data <ArrowUpRight size={12} />
+              View the recorded data <ArrowUpRight size={12} />
             </a>
           </p>
         </div>
         <div className="signal-footnote">
           <span>INPUT &rarr; RESPONSE &rarr; CONTEXT</span>
           <p>
-            Timing. Aim process. Movement. Visibility.
+            Timing. Aim. Movement. Visibility.
             <br />
             No single measurement tells the whole story.
           </p>
@@ -310,7 +309,7 @@ export function CinematicExperience({ channels }: { channels: Channel[] }) {
         <div className="pipeline-sticky">
           <div className="section-register">
             <span>02 / THE ANALYSIS</span>
-            <span>ONE PIPELINE. MULTIPLE PERSPECTIVES.</span>
+            <span>FROM REPLAY TO REPORT.</span>
           </div>
           <div className="pipeline-body">
             <div className="pipeline-copy">
@@ -340,7 +339,7 @@ export function CinematicExperience({ channels }: { channels: Channel[] }) {
             ))}
           </nav>
           <details className="pipeline-transcript">
-            <summary>Read the full pipeline</summary>
+            <summary>Read all six steps</summary>
             <ol>
               {stages.map((s) => (
                 <li key={s.short}>
@@ -368,8 +367,8 @@ export function CinematicExperience({ channels }: { channels: Channel[] }) {
           </h2>
           <div>
             <p>
-              The research pipeline, packaged for local analysis. Drop a demo.
-              Follow the analysis. Leave with a clear order for review.
+              Drop a replay into the Windows app. Analysis runs on your computer.
+              Compare the players and save a report.
             </p>
             <Link className="instrument-button" href="/analyze">
               Download NullCS <ArrowUpRight size={18} />
@@ -431,14 +430,13 @@ export function CinematicExperience({ channels }: { channels: Channel[] }) {
             <em>certainty.</em>
           </h2>
           <p>
-            We tested the research pipeline in five groups, keeping test matches
-            out of model training and calibration. These numbers use the existing
-            dataset labels. The newer model is still under test; these results
-            do not describe the current desktop installer.
+            NullCS is an ongoing research project. Testing checks both missed
+            cases and legitimate players who receive high scores. The newest
+            model is still being tested and is not yet in the download.
           </p>
         </div>
         <div className="benchmark-strip">
-          {benchmarkStats.map((stat, i) => (
+          {projectFacts.map((stat, i) => (
             <div key={stat.label}>
               <span className="technical-label">
                 0{i + 1} / {stat.label}
@@ -450,51 +448,17 @@ export function CinematicExperience({ channels }: { channels: Channel[] }) {
         <div className="research-record">
           <span className="record-index">RECORD / 001</span>
           <div>
-            <h3>Follow the methodology.</h3>
+            <h3>See what has been tested.</h3>
             <p>
-              Trace the work from telemetry to 449 player-level features,
-              temporal encounter modeling, and gradient boosting. Inspect
-              grouped evaluation, calibration, and documented failure cases.
+              GitHub explains how the models work, how they are tested, and
+              where they make mistakes. The results include the limitations.
             </p>
           </div>
-          <Link className="text-link" href="/about">
-            Research notes <ArrowUpRight size={18} />
-          </Link>
+          <a className="text-link" href={`${githubUrl}/blob/main/RESULTS.md`} target="_blank" rel="noreferrer">
+            Tests and results <ArrowUpRight size={18} />
+          </a>
         </div>
-        <details className="research-figures">
-          <summary>
-            Open the corrected internal benchmark figures <span>+</span>
-          </summary>
-          <div>
-            {[
-              {
-                src: "corrected-score-distributions.png",
-                title: "Corrected raw-score distributions",
-              },
-              {
-                src: "corrected-review-retrieval.png",
-                title: "Review retrieval including unscored matches",
-              },
-              {
-                src: "corrected-calibration.png",
-                title: "Disjoint calibration evaluation",
-              },
-            ].map((plot) => (
-              <figure key={plot.src}>
-                <Image
-                  src={`/assets/proof-pack/${plot.src}`}
-                  alt={plot.title}
-                  width={1000}
-                  height={700}
-                  sizes="(max-width: 760px) 90vw, 45vw"
-                />
-                <figcaption>
-                  {plot.title} / internal evaluation, October 2026
-                </figcaption>
-              </figure>
-            ))}
-          </div>
-        </details>
+
       </section>
       <section className="interpretation editorial-section">
         <div className="section-register">
@@ -508,11 +472,10 @@ export function CinematicExperience({ channels }: { channels: Channel[] }) {
         </p>
         <div className="closing-bottom">
           <p>
-            Some matches show clear cheating behavior. Others require encounter
-            context and evidence across matches. NullCS measures behavioral
-            signals, ranks players, and shows score and benchmark context.
-            Multi-demo player analysis is a planned research direction; the
-            current app processes one demo at a time.
+            Some replays show clear cheating. Others need a closer look at
+            player skill, timing, and what was visible. NullCS helps you choose
+            where to look; it can miss cases or flag legitimate play. The app
+            analyzes one match at a time. Player history is planned, not available yet.
           </p>
           <div>
             <Link href="/analyze" className="instrument-button">

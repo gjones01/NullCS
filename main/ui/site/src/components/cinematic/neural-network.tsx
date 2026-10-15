@@ -18,8 +18,8 @@ export function NeuralNetwork() {
         <circle cx={n.x} cy={n.y} r={i % 3 === 0 ? 8 : 5} fill="url(#neural-node)" />
         <circle cx={n.x} cy={n.y} r={i % 3 === 0 ? 14 : 10} fill="none" stroke="#91bfb6" strokeOpacity=".25" />
       </g>))}
-      {['INPUT', '64 CHANNELS', '96 CHANNELS', '128 CHANNELS', 'POOL / HEAD'].map((label, i) => <text key={label} x={50 + i * 125} y="292" textAnchor="middle">{label}</text>)}
+      {['INPUT', 'LAYER 1', 'LAYER 2', 'LAYER 3', 'SUMMARY'].map((label, i) => <text key={label} x={50 + i * 125} y="292" textAnchor="middle">{label}</text>)}
     </svg>
-    <p>32 sequence samples → temporal convolutions → encounter signal</p>
+    <p>An illustration of a model combining measurements over time.</p>
   </div>;
 }

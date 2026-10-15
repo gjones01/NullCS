@@ -10,24 +10,24 @@ const panels = [
     note: "Illustrative CS2 footage / separate from the analysis samples",
   },
   {
-    title: "ENCOUNTER TELEMETRY",
-    note: "Actual encounter summaries / de_inferno validation demo",
+    title: "RECORDED MATCH DATA",
+    note: "Real encounter measurements from a test replay",
   },
   {
     title: "ENCOUNTER CONTEXT",
-    note: "Recorded encounter summaries / not a raw 32-tick sequence",
+    note: "Summaries from recorded encounters, not a frame-by-frame replay",
   },
   {
-    title: "TEMPORAL ENCOUNTER CNN",
-    note: "Conceptual network / node counts illustrative, not live activations",
+    title: "LEARNING BEHAVIOR PATTERNS",
+    note: "Illustration of a neural network, not a live view inside the model",
   },
   {
-    title: "PLAYER-LEVEL SIGNALS",
-    note: "Actual within-lobby percentiles / illustrative player comparison",
+    title: "COMPARING PLAYERS",
+    note: "Real measurements comparing players within one match",
   },
   {
     title: "RANKED FOR REVIEW",
-    note: "Actual desktop result / ten players from local validation",
+    note: "A real desktop report from a ten-player test replay",
   },
 ];
 

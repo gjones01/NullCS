@@ -28,6 +28,13 @@ export const heroMetrics = [
   { label: "Output", value: "Ranked players, model scores, and behavioral evidence for replay review" },
 ] as const;
 
+export const projectFacts = [
+  { label: "Replays in the research dataset", value: "894" },
+  { label: "Matches scored in internal testing", value: "860" },
+  { label: "Player results in internal testing", value: "6,886" },
+  { label: "Replay analyzed at a time", value: "1" },
+] as const;
+
 export const benchmarkStats = [
   { label: "Internal raw-score ROC-AUC", value: "0.957" },
   { label: "Internal raw-score average precision", value: "0.797" },
@@ -162,7 +169,7 @@ export const footerLinks = [
 export const siteMetadata = {
   title: "NullCS",
   description:
-    "Behavioral anomaly research for Counter-Strike 2 demos, built around tick-level telemetry, encounter windows, and ranked review signals.",
+    "Analyze CS2 replays on your computer, compare unusual player behavior, and find where to look more closely.",
 };
 
 export const screenshotSlots = [

@@ -22,8 +22,8 @@ export default function AnalyzePage() {
             <em>Locally.</em>
           </h1>
           <p className="subpage-intro">
-            The NullCS research pipeline, on your computer. Analyze a CS2 demo,
-            inspect ranked players, and save a straightforward report.
+            Analyze a saved CS2 replay on your computer. Compare players,
+            find unusual behavior, and save a report.
           </p>
           <div style={{ marginTop: 32 }}>
             {download ? (
@@ -42,7 +42,7 @@ export default function AnalyzePage() {
               : "The desktop community beta is being prepared. The download will appear here when it is published."}
           </p>
           <p className="technical-label" style={{ marginTop: 24 }}>
-            WINDOWS 10/11 / 64-BIT / CPU INFERENCE
+            WINDOWS 10/11 / 64-BIT / RUNS ON YOUR COMPUTER
           </p>
           <p className="download-status">
             This beta uses the earlier models. The newer model is still being
@@ -67,39 +67,37 @@ export default function AnalyzePage() {
         <div>
           <dt>01 / Your data stays local</dt>
           <dd>
-            Choose or drop a .dem file up to 1 GiB. Analysis runs on your CPU.
+            Choose or drop a .dem replay file up to 1 GiB. Your computer runs the analysis.
             No account or demo upload is required.
           </dd>
         </div>
         <div>
           <dt>02 / Results you can read</dt>
           <dd>
-            Review order, model score, and calibrated estimate are presented
-            separately. Compare players with interactive score and benchmark
-            charts, then save a plain-text report with a score guide.
+            See which players are ranked first for review, compare their scores
+            in charts, and save a text report. A built-in guide explains the scores.
           </dd>
         </div>
         <div>
-          <dt>03 / A complete runtime</dt>
+          <dt>03 / Everything included</dt>
           <dd>
-            The installer includes the local inference engine and model
-            artifacts. You do not need a separate Python installation.
+            The installer includes the models and analysis software.
+            You do not need to install programming tools.
           </dd>
         </div>
         <div>
           <dt>04 / Keep the client current</dt>
           <dd>
             Automatic updates are not configured in this beta. Check GitHub
-            Releases for new installers. Parser and model updates ship together.
+            Releases for new installers. Updates include fixes for reading demos and changes to the models.
           </dd>
         </div>
       </dl>
       <p className="release-note">
-        <strong>Research beta.</strong> Models will continue to improve with
-        newer data. Some matches show clear cheating behavior; others need
-        encounter context and evidence from more matches. This build analyzes
-        one demo at a time. Comparing a player across multiple demos is a planned
-        research direction.
+        <strong>Research beta.</strong> We are testing changes and training on more data as it becomes
+        available. Some replays show clear cheating; others need more context.
+        The app can make mistakes and analyzes one match at a time. Comparing
+        a player across several matches is planned, not available yet.
       </p>
       <a
         className="text-link"
@@ -108,7 +106,7 @@ export default function AnalyzePage() {
         target="_blank"
         rel="noreferrer"
       >
-        Repository and release documentation <ArrowUpRight size={16} />
+        Source code and release notes <ArrowUpRight size={16} />
       </a>
     </div>
   );

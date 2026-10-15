@@ -7,10 +7,10 @@ export function SiteFooter() {
         <p>
           NULLCS / INDEPENDENT RESEARCH
           <br />
-          <span>Counter-Strike 2 behavioral analysis.</span>
+          <span>A closer look at your CS2 replays.</span>
         </p>
         <nav aria-label="Footer navigation">
-          <Link href="/about">Research</Link>
+          <Link href="/about">About NullCS</Link>
           <a href={githubUrl} target="_blank" rel="noreferrer">
             GitHub ↗
           </a>
