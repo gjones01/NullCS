@@ -43,9 +43,9 @@ export default function AboutPage() {
             features. A gradient-boosted model ranks players within a match.
           </p>
           <p>
-            The player-level feature contract contains 449 features. Training
-            and inference share aggregation logic. Five-fold grouped evaluation
-            uses demo IDs to keep matches separate across player-model folds.
+            The ranking model uses 449 features. Training and analysis use the
+            same feature calculations. The new evaluation keeps each match and
+            known repeated players together when separating training from testing.
           </p>
           <p>
             Timing, visibility, aim correction, movement pressure, and input
@@ -54,7 +54,7 @@ export default function AboutPage() {
           </p>
           <p>
             The parser rejects missing required model inputs. Inference records
-            model and parser provenance, making version changes and input failures
+            model and parser versions, making changes and input failures
             traceable when CS2 updates.
           </p>
           <Link className="text-link" href="/#pipeline">
@@ -73,26 +73,27 @@ export default function AboutPage() {
         </div>
         <div>
           <p>
-            The corrected October 2026 internal evaluation scores 6,886
+            The October 2026 internal evaluation scores 6,886
             player-match records across 860 of 894 historical demos: 992
             positive and 5,894 negative source labels. Matches, overlapping
             windows, and known repeated-player groups stay together across folds.
           </p>
           <p>
             Raw scores reach average precision of 0.797 and ROC-AUC of 0.957.
-            CNN training features are generated out of fold inside each outer
-            training partition; calibration uses a separate partition. Review
+            For each test group, the CNN, XGBoost and calibration are fitted
+            without those matches. CNN features used to train XGBoost also
+            come from models that have not trained on those groups. Review
             scores have average precision of 0.764 and ROC-AUC of 0.939.
           </p>
           <p>
-            The audit found mixed model generations in the released bundle.
-            The corrected research models remain experimental: calibration needs
-            further work, source labels are uncertain, and anonymized player IDs
-            prevent complete cross-match identity checks. Independent labeled
-            demos are still needed before making real-world accuracy claims.
+            The desktop beta still uses the earlier models. We could not fully
+            match their training files, so we rebuilt the evaluation. The new
+            model needs better calibration before release. Some dataset labels
+            and player identities also need verification. These are internal
+            benchmarks, not a measured success rate on new matches.
           </p>
-          <a className="text-link" href={`${githubUrl}/blob/main/research/corrected_baseline_summary.json`} target="_blank" rel="noreferrer">
-            Read the measured results and limitations <ArrowUpRight size={16} />
+          <a className="text-link" href={`${githubUrl}/blob/main/RESEARCH_VALIDATION.md`} target="_blank" rel="noreferrer">
+            Read the research notes <ArrowUpRight size={16} />
           </a>
         </div>
       </div>
@@ -148,11 +149,9 @@ export default function AboutPage() {
             processes one demo at a time; player-history analysis is not yet available.
           </p>
           <p>
-            The verified demoparser2 0.41.4 runtime has a known stale
-            user-command-value issue. The saved calibrator also produces a
-            scikit-learn version warning. Passing the parser column contract
-            does not prove that every input value is fresh. These limitations
-            are preserved and documented, not hidden by the interface.
+            Known limits: the parser can retain old input-command values, and
+            the released calibration file reports a library-version warning.
+            The research notes explain these issues and what has been tested.
           </p>
         </div>
       </div>

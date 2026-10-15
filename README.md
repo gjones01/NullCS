@@ -48,18 +48,15 @@ Two models, deliberately separate:
 
 ## Current benchmark
 
-Read from the saved evaluation artifacts (see [RESULTS.md](RESULTS.md)):
+The October 2026 internal evaluation scored 6,886 player-match records across 860
+matches. Raw model scores reached **0.957 ROC-AUC** and **0.797 average precision**.
+A positively labeled player ranked first in 270 of 317 positive-label matches
+(85.2%), and in the top three in 288 (90.9%).
 
-| Metric | Value |
-| --- | ---: |
-| Demos evaluated | 860 |
-| Player rows (992 positive / 5,894 negative) | 6,886 |
-| ROC-AUC | 0.956 |
-| PR-AUC | 0.796 |
-| Suspicious player ranked #1 in the lobby | 92.8% |
-| Suspicious player ranked top-3 | 97.3% |
-
-These are review-ranking numbers, not enforcement numbers.
+These results describe the new research pipeline, not the existing installer.
+Calibration still needs work before replacement weights can be released.
+Read [results](RESULTS.md) and [research notes](RESEARCH_VALIDATION.md) for the
+method, limitations and reproduction steps.
 
 ## What it tends to find
 

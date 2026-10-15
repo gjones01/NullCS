@@ -86,7 +86,7 @@ export const pipelineSteps = [
   {
     label: "Step 02",
     title: "Build encounter windows",
-    body: "Each engagement is represented as a 32-tick temporal sequence with aim, mouse, visibility, movement, shot, and damage channels.",
+    body: "Each engagement is sampled into a sequence of 32 observations with aim, mouse, visibility, movement, shot, and damage channels.",
     icon: Activity,
   },
   {

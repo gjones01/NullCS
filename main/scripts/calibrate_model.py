@@ -30,10 +30,19 @@ def parse_args() -> argparse.Namespace:
     ap.add_argument("--train-data", default=None, help="Training data mode: local, cs2cd, or merged.")
     ap.add_argument("--bins", type=int, default=12)
     ap.add_argument("--min-isotonic-positives", type=int, default=25)
+    ap.add_argument("--oof-path", type=Path, help="Explicit CSV or Parquet predictions file. Required when both default files exist.")
     return ap.parse_args()
 
 
-def load_oof(csv_path: Path, parquet_path: Path) -> pd.DataFrame:
+def load_oof(csv_path: Path, parquet_path: Path, explicit_path: Path | None = None) -> pd.DataFrame:
+    if explicit_path is not None:
+        if explicit_path.suffix.lower() == ".parquet":
+            return pd.read_parquet(explicit_path)
+        if explicit_path.suffix.lower() == ".csv":
+            return pd.read_csv(explicit_path)
+        raise ValueError("--oof-path must be a CSV or Parquet file.")
+    if csv_path.exists() and parquet_path.exists():
+        raise ValueError("Both CSV and Parquet predictions exist. They may describe different runs. Choose the verified input with --oof-path; file dates alone do not establish which is correct.")
     if parquet_path.exists():
         return pd.read_parquet(parquet_path)
     if csv_path.exists():
@@ -65,7 +74,7 @@ def main() -> int:
     artifact_paths = model_artifact_paths(MODELS_ROOT, train_mode)
     report_paths = report_artifact_paths(REPORTS_ROOT, train_mode)
 
-    df = load_oof(report_paths["player_oof_csv"], report_paths["player_oof_parquet"])
+    df = load_oof(report_paths["player_oof_csv"], report_paths["player_oof_parquet"], args.oof_path)
     raw_col = "proba_raw_oof" if "proba_raw_oof" in df.columns else "proba_cheater_oof"
     if "y_true" not in df.columns or raw_col not in df.columns:
         raise ValueError(f"OOF file must contain y_true and {raw_col} columns.")

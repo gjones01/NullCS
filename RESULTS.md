@@ -1,92 +1,49 @@
 # Results
 
-Current public readout, taken from the saved artifacts under `main/data/processed`.
-Nothing here is invented: each number is read from a file that is in the repository.
+Measured October 14, 2026. These are internal research results for the new evaluation
+pipeline, not accuracy claims for the current desktop installer.
 
-## What was measured
+## Dataset and scores
 
-| | Window model | Ranking model |
-| --- | ---: | ---: |
-| Demos | 894 | 860 |
-| Rows | 281,792 windows | 6,886 player rows |
-| Positives / negatives | 30,559 / 251,233 | 992 / 5,894 |
-| Features | 35 channels x 32 ticks | 449 |
-| PR-AUC | 0.566 | 0.796 |
-| ROC-AUC | 0.853 | 0.956 |
-| Split | out-of-fold | GroupKFold by `demo_id` |
+The evaluation scored 6,886 player-match records across 860 of 894 demos.
+Source labels contain 992 positive and 5,894 negative scored records.
+Some participants lack enough usable evidence to receive a score.
 
-The window model is a feature generator; its scores become player-level summaries
-rather than final verdicts.
+| Output | ROC-AUC | Average precision | Brier score | Log loss |
+| --- | ---: | ---: | ---: | ---: |
+| Raw model score | 0.957 | 0.797 | 0.0596 | 0.2123 |
+| Calibrated output | 0.939 | 0.761 | 0.0548 | 0.5758 |
+| Evidence-adjusted review score | 0.939 | 0.764 | 0.0549 | 0.5330 |
 
-### Threshold behaviour (ranking model, saved summary)
+ROC-AUC measures score ordering across the labeled classes. Average precision
+summarizes precision and recall as the cutoff changes. Neither is an accuracy
+percentage. Lower Brier score and log loss are better; log loss penalizes confidently
+wrong predictions strongly. Calibration needs work before model release.
 
-| Threshold | Precision | Recall |
-| ---: | ---: | ---: |
-| 0.20 | 0.627 | 0.911 |
-| 0.30 | 0.673 | 0.883 |
-| 0.40 | 0.710 | 0.872 |
-| 0.50 | 0.734 | 0.855 |
+## Who appears near the top?
 
-## Ranking, which is what review cares about
+Across all 317 matches with a positive source label, including cases where a player
+did not receive a score:
 
-Across the 293 demos that contain a labelled suspicious player:
-
-| Check | Result |
+| Review list | Matches with a positively labeled player in that range |
 | --- | ---: |
-| Suspicious player ranked #1 | 92.8% |
-| Suspicious player ranked #2 | 96.2% |
-| Suspicious player ranked #3 | 97.3% |
+| First place | 270 / 317 (85.2%) |
+| Top three | 288 / 317 (90.9%) |
+| Top five | 290 / 317 (91.5%) |
 
-The useful question is not only "can the model separate rows", but "does the player
-a reviewer should open land near the top of that lobby". Most of the time, it does.
+Equal scores use player ID order for reproducible reporting. Different tie ordering
+would give 265-274, 281-290 and 282-293 matches respectively. Older published results
+used a smaller denominator and a different evaluation process; they are not a fair
+before/after comparison.
 
-## What the data shows
+## What these results support
 
-**1. Player scores built from the window model separate the two groups.**
-Median `enn_score_mean` is 0.774 for positive rows against 0.316 for negative rows,
-and median `enn_high_rate` is 0.819 against 0.111. Suspicious rows tend to contain
-clusters of high-scoring windows rather than one isolated event.
+All learned stages exclude the test groups. Known repeated players and overlapping
+windows stay together. Historical labels and unknown player identities remain limits.
+Raw-score 95% bootstrap intervals were 0.946-0.965 for ROC-AUC and 0.747-0.845 for
+average precision (200 group-level resamples). These intervals do not remove label
+uncertainty or the effects of earlier development on this dataset.
 
-**2. The window model itself is doing real work.**
-Median window score is 0.769 for positive windows against 0.188 for negative
-windows. 35.2% of positive windows score at or above 0.90, against 1.2% of negative
-windows.
-
-**3. Fast rifle timing, prefire-like fights and headshots carry part of the signal.**
-`prefire_rate_rifle` has a feature AUC of 0.826 (median 0.500 positive vs 0.111
-negative), `rifle_fast_rt_rate` 0.811 (0.500 vs 0.158) and `headshot_rate` 0.808
-(0.727 vs 0.462). None of them is sufficient on its own.
-
-**4. Some process features separate by being lower, not higher.**
-Positive rows show *less* pre-shot aim noise than negative rows
-(`enc_preshot_err_std_mean` median 0.632 vs 1.129) and less noisy correction
-(`enc_aim_collapse_ratio_high_rate` median 0.635 vs 0.778). Clean stabilisation can
-be a signal in its own right.
-
-## Where it gets things wrong
-
-- **Legitimate players can score high.** Among 567 demos with no known cheater, the
-  median top player score is 0.052, but the 90th percentile reaches 0.748 and some
-  matches top out at 1.000. 221 negative rows from 92 clean demos reach a risk of
-  0.50 or more. These are usually high-headshot, fast-reaction games with enough
-  kills to support the statistics.
-- **The top of the lobby can be wrong.** In 21 labelled-cheater demos the known
-  suspicious player is not ranked first, sometimes clearly behind another player.
-- **Known hard cases:** very high-skill play that looks efficient; players with too
-  few supported fights to be stable; behaviour that leaves no measurable aim,
-  timing or visibility trace; and anything outside the demo file, such as comms,
-  team plans or multi-match history.
-
-## What is not measured here
-
-The artifacts support feature distributions, ranking metrics and score separation.
-They do not support claims like "X% of confirmed cheater windows show a specific
-correction pattern". Cheat-type-specific claims need dedicated labels first.
-
-## A note on reproducibility
-
-The saved summary is the reference for the numbers above. Re-running evaluation
-today reproduces the ranking closely but not always to the last decimal
-(0.793/0.956 rather than 0.796/0.956) with bit-identical inference, which points at
-library-version drift rather than a model change. Pinned dependencies are tracked as
-open work before any number here is treated as a regression target.
+Read the [research notes](RESEARCH_VALIDATION.md) for the method, release decision
+and reproduction commands. The [full results](research/corrected_baseline_summary.json)
+contain metrics, counts and run hashes. No new production weights were released.

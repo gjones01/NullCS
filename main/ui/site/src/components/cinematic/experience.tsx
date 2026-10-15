@@ -431,11 +431,10 @@ export function CinematicExperience({ channels }: { channels: Channel[] }) {
             <em>certainty.</em>
           </h2>
           <p>
-            Five-fold internal evaluation keeps test groups out of every learned
-            stage, including CNN feature generation and calibration. These results
-            describe the corrected research baseline on historical source labels.
-            They do not validate the current desktop release or replace an
-            independent real-world test.
+            We tested the research pipeline in five groups, keeping test matches
+            out of model training and calibration. These numbers use the existing
+            dataset labels. The newer model is still under test; these results
+            do not describe the current desktop installer.
           </p>
         </div>
         <div className="benchmark-strip">

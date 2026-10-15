@@ -52,7 +52,7 @@ def read_result(root: Path, job: str, filename: str) -> dict:
         warnings.append('Participant coverage was not recorded for this analysis; the list contains scored players only.')
     warnings.append('Calibrated estimates reflect the research sample, not a validated chance of cheating in this match.')
     if trace.get('model_sha256') == 'f9016d95a144e1004f40c01f15b86879d9d9101cdda4659acaa261ac80610ea8':
-        warnings.append('Artifact audit: the released temporal checkpoint differs from the generator of this player model\'s training features. Historical evaluation does not validate the complete released pipeline.')
+        warnings.append('The released CNN differs from the neural model used to create the ranking model\'s training features. Older test results do not establish this release\'s accuracy.')
     if not trace.get('calibration_used'):
         warnings.append('Calibration is unavailable for this model; no calibrated estimate is shown.')
     log_path = root / 'logs' / 'pipeline.log'
