@@ -59,7 +59,7 @@ The existing desktop model and installer remain unchanged.
 
 ## Checks and performance
 
-- The API/research suite passed 99 tests, including calibration input selection,
+- The API/research suite passed 101 tests, including calibration input selection,
   grouped method selection, label isolation and false-positive denominators.
 - The full patch-14153 parser check passed, including required model columns.
 - Repeating one training fold produced identical CNN weights and predictions on
@@ -101,3 +101,32 @@ Run manifests record source hashes, model hashes, settings and group assignments
 The older-file checks remain available in check_artifact_lineage.py. The detailed
 October 14 investigation remains in Git history; this shorter note replaces it
 as the current explanation.
+
+## Sigmoid integration check
+
+The fixed fold-0 model was exported with the sigmoid method selected by its
+development-data comparison. It remains an experimental integration candidate,
+not a final model trained for release. Export replays the calibration decision,
+checks the parent run, and records the calibration report hash in the bundle.
+
+Two real demos completed with 8 and 10 scored players. Their raw model scores
+matched the earlier fold-0 runs exactly; only calibration and resulting review
+scores changed. The desktop API also completed a real analysis, returned the
+same report as the CLI, and rejected unauthenticated intake and result requests.
+The checks used the actual pipeline, not mocked predictions.
+
+The original float32 calibration predictions replay exactly. The production
+float64 scoring boundary differs by at most 0.000000081 on this fold; export checks
+that the difference stays below one float32 epsilon and records the measurement.
+
+The packaging script now carries the required model contract with corrected
+bundles. A source-resource packaging run verified all eight model file hashes.
+No frozen executable or installer was built in this check, and no production
+weights were replaced. A final training run and packaged-app verification still
+separate this integration candidate from a release.
+
+To repeat the export after the calibration comparison:
+
+```powershell
+python main/scripts/export_corrected_validation_bundle.py --fold <fold0> --input <input-dir> --calibration-validation <calibration-dir> --output <new-model-dir>
+```

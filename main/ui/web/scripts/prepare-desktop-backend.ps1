@@ -90,6 +90,13 @@ $modelFiles = @(
 foreach ($name in $modelFiles) {
   Copy-One (Join-Path $RepoRoot "main\data\processed\models\$name") (Join-Path $OutRoot "main\data\processed\models\$name")
 }
+# Corrected bundles require their hash/feature-semantics contract at runtime.
+# Do not silently package only the eight legacy files and leave inference broken.
+$trainingManifestPath = Join-Path $OutRoot "main\data\processed\models\xgb_player_level_cs2cd_training_manifest.json"
+$trainingManifest = Get-Content -LiteralPath $trainingManifestPath -Raw | ConvertFrom-Json
+if ($trainingManifest.pipeline_semantics -eq "corrected-v2") {
+  Copy-One (Join-Path $RepoRoot "main\data\processed\models\xgb_player_level_cs2cd_pipeline_contract.json") (Join-Path $OutRoot "main\data\processed\models\xgb_player_level_cs2cd_pipeline_contract.json")
+}
 Copy-One (Join-Path $RepoRoot "main\scripts\run_infer_pipeline.py") (Join-Path $OutRoot "main\scripts\run_infer_pipeline.py")
 Copy-One (Join-Path $RepoRoot "main\scripts\explain_demo.py") (Join-Path $OutRoot "main\scripts\explain_demo.py")
 
