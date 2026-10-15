@@ -10,7 +10,7 @@ export function ProofGrid() {
       id="proof"
       eyebrow="Benchmarks"
       title="Current benchmark readout."
-      description="Grouped out-of-fold evaluation is split by demo_id. The metrics below describe review ranking, not enforcement accuracy."
+      description="Corrected internal evaluation isolates test groups from every learned stage. Raw-score metrics describe the research baseline, not the current desktop release or an independent real-world test."
     >
       <Reveal>
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">

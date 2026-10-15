@@ -38,6 +38,8 @@ class CS2CDMatch:
     # into the per-demo infer artifacts so a stored score can be traced back to the
     # parser + CS2 patch that produced it.
     parser_provenance: dict[str, Any] = field(default_factory=dict)
+    # Optional diagnostics, never a model input or a training eligibility rule.
+    participant_info: pd.DataFrame = field(default_factory=pd.DataFrame)
 
 
 def list_match_ids(split: str) -> list[str]:

@@ -44,6 +44,11 @@ export default function AnalyzePage() {
           <p className="technical-label" style={{ marginTop: 24 }}>
             WINDOWS 10/11 / 64-BIT / CPU INFERENCE
           </p>
+          <p className="download-status">
+            This beta uses the earlier experimental model bundle. The new internal
+            benchmarks describe the corrected research baseline, which has not
+            replaced this download. See the research notes for current limitations.
+          </p>
         </div>
         <div className="download-art">
           <Image

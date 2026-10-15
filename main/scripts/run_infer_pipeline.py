@@ -136,7 +136,7 @@ def _ensure_demo_copy(src_dem: Path, demo_id: str, raw_uploads_root: Path) -> Pa
     return dst_dem
 
 
-def _build_player_features_for_demo(engagement_path: Path, demo_id: str, encounter_path: Path | None = None) -> pd.DataFrame:
+def _build_player_features_for_demo(engagement_path: Path, demo_id: str, encounter_path: Path | None = None, *, shrinkage_references: dict | None = None) -> pd.DataFrame:
     df = pd.read_parquet(engagement_path)
     if df.empty:
         raise RuntimeError(f"Engagement features are empty for demo: {demo_id}")
@@ -162,7 +162,7 @@ def _build_player_features_for_demo(engagement_path: Path, demo_id: str, encount
             if "attacker_name" not in encounter_df.columns:
                 encounter_df["attacker_name"] = ""
 
-    agg = agg_mod.aggregate_kill_and_encounter_frames(df, encounter_df)
+    agg = agg_mod.aggregate_kill_and_encounter_frames(df, encounter_df, shrinkage_references=shrinkage_references)
     if agg.empty:
         raise RuntimeError(f"No eligible players (MIN_KILLS filter) for demo: {demo_id}")
     return agg
@@ -232,6 +232,7 @@ def _merge_encounter_nn_features_for_demo(
     encounter_df: pd.DataFrame,
     processed_root: Path,
     train_mode: str,
+    *, semantics: str = "legacy-v1",
 ) -> pd.DataFrame:
     artifacts = encounter_model_artifacts(processed_root / "models", train_mode)
     if not artifacts["model"].exists() or not artifacts["manifest"].exists():
@@ -247,7 +248,7 @@ def _merge_encounter_nn_features_for_demo(
             artifacts["model"], artifacts["preproc"], artifacts["features"]
         )
         scored = score_encounter_frame(encounter_df, model, preproc, feature_cols, device=device_name)
-        player_scores = aggregate_encounter_scores(scored)
+        player_scores = aggregate_encounter_scores(scored, semantics=semantics)
         if player_scores.empty:
             return player_df
         out_path = encounter_infer_player_feature_path(processed_root, str(player_df["demo_id"].iloc[0]))
@@ -257,6 +258,8 @@ def _merge_encounter_nn_features_for_demo(
         print(f"[OK] wrote {out_path}")
         return merged
     except Exception as exc:
+        if semantics != "legacy-v1":
+            raise RuntimeError("Corrected encounter model scoring failed") from exc
         print(f"[WARN] encounter NN scoring skipped: {exc}")
         return player_df
 
@@ -276,13 +279,16 @@ def _selected_train_mode(models_dir: Path, model_artifact: str | None) -> tuple[
 
 def _build_demo_feature_frames_demoparser2(
     demo_file: Path, demo_id: str
-) -> tuple[pd.DataFrame, pd.DataFrame, dict[str, object]]:
+) -> tuple[pd.DataFrame, pd.DataFrame, dict[str, object], dict]:
     print("[NULLCS_STAGE] parsing", flush=True)
     match = load_demoparser2_demo(demo_file, demo_id=demo_id)
     print("[NULLCS_STAGE] feature_processing", flush=True)
     kill_df, encounter_df = cs2cd_build_mod.build_match_outputs(match)
     provenance = dict(getattr(match, "parser_provenance", None) or {})
-    return kill_df, encounter_df, provenance
+    from src.utils.player_coverage import collect_coverage
+    from src.features.aggregate_player_features import MIN_KILLS
+    coverage = collect_coverage(match, kill_df, encounter_df, MIN_KILLS)
+    return kill_df, encounter_df, provenance, coverage
 
 
 def _validate_demo_id(demo_id: str) -> None:
@@ -563,6 +569,8 @@ def main() -> int:
     demo_file = _ensure_demo_copy(dem_path, demo_id, raw_uploads_root)
     print(f"[INFO] demo file: {demo_file}")
     model_path, _feats_path, train_mode = _selected_train_mode(models_dir, args.model_artifact)
+    from src.utils.pipeline_contract import load_pipeline_contract
+    pipeline_contract = load_pipeline_contract(model_path)
     print(f"[INFO] selected model: {model_path.name} train_mode={train_mode}")
 
     parse_warning = None
@@ -571,7 +579,7 @@ def main() -> int:
     if train_mode != "cs2cd":
         print(f"[WARN] model train_mode={train_mode}; demo will still be parsed with demoparser2-local for schema parity")
 
-    kill_df, encounter_df, parser_provenance = _build_demo_feature_frames_demoparser2(
+    kill_df, encounter_df, parser_provenance, coverage = _build_demo_feature_frames_demoparser2(
         demo_file, demo_id=demo_id
     )
     print(
@@ -588,13 +596,20 @@ def main() -> int:
     _write_table(kill_df, eng_path)
     _write_table(encounter_df, encounter_path)
     provenance_path.write_text(json.dumps(parser_provenance, indent=2), encoding="utf-8")
+    # Persist diagnostics before aggregation, including when no one is eligible.
+    coverage_path = demo_dir / "player_coverage.json"
+    coverage_path.write_text(json.dumps(coverage, indent=2), encoding="utf-8")
     print(f"[OK] wrote {eng_path}")
     print(f"[OK] wrote {encounter_path}")
     print(f"[OK] wrote {provenance_path}")
 
-    player_df = _build_player_features_for_demo(eng_path, demo_id=demo_id, encounter_path=encounter_path)
+    player_df = _build_player_features_for_demo(eng_path, demo_id=demo_id, encounter_path=encounter_path,
+        shrinkage_references=pipeline_contract['shrinkage_references'] if pipeline_contract else None)
     print("[NULLCS_STAGE] inference", flush=True)
-    player_df = _merge_encounter_nn_features_for_demo(player_df, encounter_df, processed_root, train_mode)
+    player_df = _merge_encounter_nn_features_for_demo(player_df, encounter_df, processed_root, train_mode,
+        semantics=pipeline_contract['encounter_aggregation'] if pipeline_contract else 'legacy-v1')
+    if pipeline_contract and ('enn_score_mean' not in player_df or player_df['enn_score_mean'].isna().any()):
+        raise RuntimeError('Corrected pipeline requires encounter predictions for every eligible player')
     per_demo_player_path = demo_dir / "player_features_infer.parquet"
     player_df.to_parquet(per_demo_player_path, index=False)
     print(f"[OK] wrote {per_demo_player_path}")
@@ -603,6 +618,10 @@ def main() -> int:
     infer_ranked, debug_trace = _infer_scores(player_df, processed_root=processed_root, model_artifact=args.model_artifact)
     per_demo_report_dir = reports_root / demo_id
     per_demo_report_dir.mkdir(parents=True, exist_ok=True)
+    from src.utils.player_coverage import finish_coverage
+    finish_coverage(coverage, infer_ranked['attacker_steamid'], player_df['attacker_steamid'])
+    coverage_path.write_text(json.dumps(coverage, indent=2), encoding="utf-8")
+    (per_demo_report_dir / "player_coverage.json").write_text(json.dumps(coverage, indent=2), encoding="utf-8")
     per_demo_csv = per_demo_report_dir / "ranked_players_infer.csv"
     infer_ranked.to_csv(per_demo_csv, index=False)
     print(f"[OK] wrote {per_demo_csv}")
@@ -611,6 +630,8 @@ def main() -> int:
     print(f"[OK] wrote {debug_trace_path}")
 
     manifest = {
+        "pipeline_semantics": "corrected-v2" if pipeline_contract else "legacy-v1",
+        "experimental_model": bool(pipeline_contract and pipeline_contract.get('experimental', False)),
         "demo_id": demo_id,
         "demo_file": str(demo_file),
         "zip_path": "",

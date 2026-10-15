@@ -20,7 +20,7 @@ export function ReportCharts({ players, modelHash }: { players: ReportPlayer[]; 
     {matching ? <>
       <h3>Where does {player.name} sit?</h3>
       <p><span className={`signal-badge band-${signalBand(player.model_score, matching)}`}>{bandLabels[signalBand(player.model_score, matching)]}</span> Model score: {(player.model_score * 100).toFixed(1)} / 100</p>
-      <p>Historical evaluation: {reference.rows.toLocaleString()} player-match records across {reference.demos} demos. Each match was held out from its player-model training fold. Bars show the percentage of each labeled group in a score range.</p>
+      <p>Historical reference: {reference.rows.toLocaleString()} player-match records across {reference.demos} demos. Matches were held out from the player-model fold, but not isolated from every learned stage. The temporal training artifacts also differ from the released checkpoint. These distributions are historical context, not validated accuracy for this release.</p>
       <p className="chart-note">Positive labels mark suspected cheating in the dataset; negative labels mark the comparison group. The white line marks this player's raw score.</p>
       <div className="distribution-key"><span>■ Negative label ({reference.negative.toLocaleString()})</span><span>▧ Positive label ({reference.positive.toLocaleString()})</span></div>
       <div className="distribution" role="group" aria-label="Historical raw model score distribution; select a five-point range">

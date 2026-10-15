@@ -23,16 +23,16 @@ export const navItems = [
 ] as const;
 
 export const heroMetrics = [
-  { label: "Dataset", value: "894 demos and 281,792 encounter windows in the current public benchmark" },
+  { label: "Dataset", value: "894 demos and 281,792 encounter windows in the historical research corpus" },
   { label: "Features", value: "35 temporal CNN channels plus 449 player-demo ranking features" },
   { label: "Output", value: "Ranked players, model scores, and behavioral evidence for replay review" },
 ] as const;
 
 export const benchmarkStats = [
-  { label: "Player-level ROC-AUC", value: "0.956" },
-  { label: "Player-level PR-AUC", value: "0.796" },
-  { label: "Suspicious player top-1", value: "92.8%" },
-  { label: "Suspicious player top-3", value: "97.3%" },
+  { label: "Internal raw-score ROC-AUC", value: "0.957" },
+  { label: "Internal raw-score average precision", value: "0.797" },
+  { label: "Evaluated matches / 894 in corpus", value: "860" },
+  { label: "Evaluated player-match records", value: "6,886" },
 ] as const;
 
 export const featureCards = [
@@ -183,21 +183,21 @@ export const screenshotSlots = [
 export const proofCards = [
   {
     eyebrow: "Benchmark slices",
-    title: "Grouped player-level evaluation reaches ROC-AUC 0.956 and PR-AUC 0.796",
-    body: "The current CS2CD player-level readout covers 860 demos after filtering, with 992 positive and 5,894 negative player-demo rows.",
-    image: "/assets/proof-pack/benchmark_top1_distribution.png",
+    title: "Corrected internal evaluation: ROC-AUC 0.957 and average precision 0.797",
+    body: "Five outer folds keep evaluation groups out of CNN fitting, preprocessing, player-model fitting, and calibration. These raw-score results use historical source labels, not an independent external test.",
+    image: "/assets/proof-pack/corrected-score-distributions.png",
   },
   {
     eyebrow: "Per-demo surface",
-    title: "The labeled suspicious player ranks top-1 in 92.8% of suspicious demos",
-    body: "Top-3 retrieval is 97.3% across 293 demos with a suspicious player label, which is the core review-triage metric.",
-    image: "/assets/proof-pack/benchmark_top1_vs_top3_scatter.png",
+    title: "Review retrieval includes matches the model could not score",
+    body: "A labeled positive player appears in the top 1 for 270 of 317 positive-label matches (85.2%), and the top 3 for 288 (90.9%). Tied scores affect placement; the published report includes tie bounds.",
+    image: "/assets/proof-pack/corrected-review-retrieval.png",
   },
   {
     eyebrow: "Control path",
-    title: "Encounter-model scores separate positive windows from negative windows",
-    body: "Median CNN score is 0.769 for positive windows and 0.188 for negative windows. The model is seeing repeatable encounter-level structure.",
-    image: "/assets/proof-pack/control_path_bucket_boxplots.png",
+    title: "Calibration remains a release blocker",
+    body: "Disjoint isotonic calibration improves Brier error from 0.0596 to 0.0548, but worsens log loss from 0.212 to 0.576. The experimental model has not replaced the desktop release.",
+    image: "/assets/proof-pack/corrected-calibration.png",
   },
   {
     eyebrow: "Control features",

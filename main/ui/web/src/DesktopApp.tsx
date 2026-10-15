@@ -11,7 +11,8 @@ import { signalBand, bandLabels } from './lib/report-context';
 import './desktop.css';
 
 type Player = { rank: number; steamid: string; name: string; review_score: number; model_score: number; calibrated_probability: number | null; confidence: number | null };
-type Result = { schema_version: string; job_id: string; filename: string; map_name: string; players: Player[]; warnings: string[]; model: { name: string; sha256: string; calibration_used: boolean }; parser_version: string };
+type Coverage = { participants: { steamid: string; name: string; status: string; reason: string | null }[]; counts: { detected: number; scored: number }; note: string };
+type Result = { schema_version: string; job_id: string; filename: string; map_name: string; players: Player[]; coverage?: Coverage | null; warnings: string[]; model: { name: string; sha256: string; calibration_used: boolean }; parser_version: string };
 type Update = { configured: boolean; version: string | null; notes: string | null };
 const glossary = [
   ['Review score', 'The score used to order players, after calibration when available and adjustments for limited evidence.'],
@@ -159,6 +160,8 @@ export default function DesktopApp() {
     const lines = ['NULLCS - MATCH REVIEW', result.filename, `Map: ${result.map_name}`, '',
       'Some matches show clear cheating behavior. Others require a closer look at encounters, match context, and repeated behavior across demos.', '',
       ...result.players.map(p => `#${p.rank} ${p.name} (${p.steamid})\n  ${bandLabels[signalBand(p.model_score, result.model.sha256 === reference.model_sha256)]} | Review score: ${score(p.review_score)}/100 | Model score: ${score(p.model_score)}/100 | Calibrated estimate: ${score(p.calibrated_probability)}${p.calibrated_probability === null ? '' : '%'} | Evidence confidence: ${score(p.confidence)}/100`),
+      '', 'PARTICIPANT COVERAGE', result.coverage ? `${result.coverage.counts.scored} scored / ${result.coverage.counts.detected} observed participants. ${result.coverage.note}` : 'Coverage was not recorded for this analysis.',
+      ...(result.coverage?.participants.filter(p => p.status !== 'scored').map(p => `${p.name} (${p.steamid}): Not Scored - ${p.reason}`) || []),
       '', 'REFERENCE CONTEXT', result.model.sha256 === reference.model_sha256 ? 'Historical grouped evaluation: 6,886 player-match records, 860 demos. At raw score >= 50/100: 846 true positives, 301 false positives, 146 false negatives. Display bands do not change scores. Interactive distributions are available inside the app.' : 'No matching benchmark reference is bundled for this model.',
       '', 'HOW TO READ THIS REPORT', ...glossary.map(([term, definition]) => `${term}: ${definition}`), '', 'LIMITATIONS', ...result.warnings,
       '', `Model: ${result.model.name}`, `Model SHA-256: ${result.model.sha256}`, `Parser: ${result.parser_version || 'Not recorded'}`, `Analysis: ${result.job_id}`];
@@ -194,6 +197,7 @@ export default function DesktopApp() {
       {result && <section className="glass results" aria-labelledby="results-title"><div className="result-heading"><div><p className="eyebrow">03 / MATCH REPORT</p><h2 id="results-title">Start your review here.</h2><p>{result.filename}  /  {result.map_name}  /  {result.players.length} players</p></div><button className="primary" onClick={exportReport}>Save simple report</button></div>
         <div className="table-scroll"><table><thead><tr><th>Review order</th><th>Player</th><th><a href="#legend">Review score</a></th><th>Model score</th><th>Calibrated estimate</th></tr></thead><tbody>{result.players.map(p => <tr key={p.steamid}><td><span className="rank">{String(p.rank).padStart(2, '0')}</span></td><td>{p.name}<small>{p.steamid}</small></td><td><b>{score(p.review_score)}</b><span className="out-of"> / 100</span></td><td>{score(p.model_score)}<span className="out-of"> / 100</span></td><td>{score(p.calibrated_probability)}{p.calibrated_probability !== null && '%'}</td></tr>)}</tbody></table></div>
         <ReportCharts key={result.job_id} players={result.players} modelHash={result.model.sha256} />
+        {result.coverage && <div aria-label="Participant coverage"><h3>Participant coverage</h3><p>{result.coverage.counts.scored} scored / {result.coverage.counts.detected} observed participants</p><ul>{result.coverage.participants.filter(p => p.status !== 'scored').map(p => <li key={p.steamid}><b>{p.name}</b> ({p.steamid}) — Not Scored: {p.reason}</li>)}</ul><small>{result.coverage.note}</small></div>}
         <details><summary>Result limitations and model details</summary><ul>{result.warnings.map(w => <li key={w}>{w}</li>)}</ul><p>Model: {result.model.name}  /  Parser: {result.parser_version || 'Not recorded'}</p></details>
       </section>}
       <section id="legend" className="legend"><div><p className="eyebrow">READING THE RESULTS</p><h2>Score, evidence, context.</h2><p>Some matches show clear cheating behavior. Others require a closer look at encounters, match context, and repeated behavior across demos.</p><p>Planned research: compare a player across multiple demos to separate isolated events from recurring patterns. This build analyzes one demo at a time.</p></div><dl>{glossary.map(([term, definition]) => <div key={term}><dt>{term}</dt><dd>{definition}</dd></div>)}</dl></section>

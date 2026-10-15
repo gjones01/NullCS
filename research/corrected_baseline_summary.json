@@ -1,0 +1,657 @@
+{
+  "scope": "Corrected internal historical-data evaluation; not independent external or released-model validation",
+  "rows": 6886,
+  "demos": 860,
+  "components": 763,
+  "metrics": {
+    "raw_score": {
+      "n": 6886,
+      "positive": 992,
+      "prevalence": 0.14406041243101947,
+      "roc_auc": 0.9568328097463796,
+      "average_precision": 0.7965273288162554,
+      "brier": 0.05964151111828736,
+      "log_loss": 0.21232549394947794,
+      "ece_10_equal_width": 0.06355003303399655,
+      "reliability": [
+        {
+          "lower": 0.0,
+          "upper": 0.1,
+          "n": 4517,
+          "prediction": 0.02171891744390113,
+          "observed": 0.00752711976975869
+        },
+        {
+          "lower": 0.1,
+          "upper": 0.2,
+          "n": 577,
+          "prediction": 0.14167174274679692,
+          "observed": 0.058925476603119586
+        },
+        {
+          "lower": 0.2,
+          "upper": 0.3,
+          "n": 289,
+          "prediction": 0.2450602844512174,
+          "observed": 0.0726643598615917
+        },
+        {
+          "lower": 0.3,
+          "upper": 0.4,
+          "n": 164,
+          "prediction": 0.344674821125298,
+          "observed": 0.16463414634146342
+        },
+        {
+          "lower": 0.4,
+          "upper": 0.5,
+          "n": 113,
+          "prediction": 0.44419985587617994,
+          "observed": 0.168141592920354
+        },
+        {
+          "lower": 0.5,
+          "upper": 0.6,
+          "n": 89,
+          "prediction": 0.5484795958808298,
+          "observed": 0.25842696629213485
+        },
+        {
+          "lower": 0.6,
+          "upper": 0.7,
+          "n": 69,
+          "prediction": 0.6480333934659543,
+          "observed": 0.4492753623188406
+        },
+        {
+          "lower": 0.7,
+          "upper": 0.8,
+          "n": 116,
+          "prediction": 0.7570906964869335,
+          "observed": 0.5
+        },
+        {
+          "lower": 0.8,
+          "upper": 0.9,
+          "n": 221,
+          "prediction": 0.8584735237095691,
+          "observed": 0.6561085972850679
+        },
+        {
+          "lower": 0.9,
+          "upper": 1.0,
+          "n": 731,
+          "prediction": 0.9591501333971193,
+          "observed": 0.8207934336525308
+        }
+      ],
+      "thresholds": [
+        {
+          "threshold": 0.2,
+          "negative_players": 5894,
+          "flagged_negative_players": 868,
+          "negative_matches": 577,
+          "flagged_negative_matches": 307
+        },
+        {
+          "threshold": 0.5,
+          "negative_players": 5894,
+          "flagged_negative_players": 369,
+          "negative_matches": 577,
+          "flagged_negative_matches": 141
+        },
+        {
+          "threshold": 0.8,
+          "negative_players": 5894,
+          "flagged_negative_players": 207,
+          "negative_matches": 577,
+          "flagged_negative_matches": 72
+        }
+      ]
+    },
+    "calibrated_probability": {
+      "n": 6886,
+      "positive": 992,
+      "prevalence": 0.14406041243101947,
+      "roc_auc": 0.9389332508729491,
+      "average_precision": 0.7605135736148723,
+      "brier": 0.05475431945261211,
+      "log_loss": 0.5758435776526334,
+      "ece_10_equal_width": 0.03146838378491875,
+      "reliability": [
+        {
+          "lower": 0.0,
+          "upper": 0.1,
+          "n": 5562,
+          "prediction": 0.009306946388380156,
+          "observed": 0.02571017619561309
+        },
+        {
+          "lower": 0.1,
+          "upper": 0.2,
+          "n": 153,
+          "prediction": 0.14852541261443905,
+          "observed": 0.17647058823529413
+        },
+        {
+          "lower": 0.2,
+          "upper": 0.3,
+          "n": 79,
+          "prediction": 0.24199772993975047,
+          "observed": 0.5189873417721519
+        },
+        {
+          "lower": 0.3,
+          "upper": 0.4,
+          "n": 123,
+          "prediction": 0.34278257227525477,
+          "observed": 0.21951219512195122
+        },
+        {
+          "lower": 0.4,
+          "upper": 0.5,
+          "n": 66,
+          "prediction": 0.46636210427139746,
+          "observed": 0.5454545454545454
+        },
+        {
+          "lower": 0.5,
+          "upper": 0.6,
+          "n": 138,
+          "prediction": 0.565764066533766,
+          "observed": 0.7246376811594203
+        },
+        {
+          "lower": 0.6,
+          "upper": 0.7,
+          "n": 65,
+          "prediction": 0.6591559565984286,
+          "observed": 0.6461538461538462
+        },
+        {
+          "lower": 0.7,
+          "upper": 0.8,
+          "n": 303,
+          "prediction": 0.7618586657070877,
+          "observed": 0.7887788778877888
+        },
+        {
+          "lower": 0.8,
+          "upper": 0.9,
+          "n": 40,
+          "prediction": 0.8161749437451362,
+          "observed": 0.825
+        },
+        {
+          "lower": 0.9,
+          "upper": 1.0,
+          "n": 357,
+          "prediction": 0.9849771857261658,
+          "observed": 0.8515406162464986
+        }
+      ],
+      "thresholds": [
+        {
+          "threshold": 0.2,
+          "negative_players": 5894,
+          "flagged_negative_players": 349,
+          "negative_matches": 577,
+          "flagged_negative_matches": 141
+        },
+        {
+          "threshold": 0.5,
+          "negative_players": 5894,
+          "flagged_negative_players": 185,
+          "negative_matches": 577,
+          "flagged_negative_matches": 69
+        },
+        {
+          "threshold": 0.8,
+          "negative_players": 5894,
+          "flagged_negative_players": 60,
+          "negative_matches": 577,
+          "flagged_negative_matches": 35
+        }
+      ]
+    },
+    "review_score": {
+      "n": 6886,
+      "positive": 992,
+      "prevalence": 0.14406041243101947,
+      "roc_auc": 0.9387436615420821,
+      "average_precision": 0.7644528151309208,
+      "brier": 0.05489111404817809,
+      "log_loss": 0.5330021933283133,
+      "ece_10_equal_width": 0.032321868774709286,
+      "reliability": [
+        {
+          "lower": 0.0,
+          "upper": 0.1,
+          "n": 5563,
+          "prediction": 0.009154273187558319,
+          "observed": 0.025705554556893762
+        },
+        {
+          "lower": 0.1,
+          "upper": 0.2,
+          "n": 162,
+          "prediction": 0.14686400059288668,
+          "observed": 0.18518518518518517
+        },
+        {
+          "lower": 0.2,
+          "upper": 0.3,
+          "n": 76,
+          "prediction": 0.24482832641193744,
+          "observed": 0.5394736842105263
+        },
+        {
+          "lower": 0.3,
+          "upper": 0.4,
+          "n": 122,
+          "prediction": 0.3381853041345956,
+          "observed": 0.22131147540983606
+        },
+        {
+          "lower": 0.4,
+          "upper": 0.5,
+          "n": 78,
+          "prediction": 0.45899577343311065,
+          "observed": 0.5769230769230769
+        },
+        {
+          "lower": 0.5,
+          "upper": 0.6,
+          "n": 132,
+          "prediction": 0.5601689411835237,
+          "observed": 0.7121212121212122
+        },
+        {
+          "lower": 0.6,
+          "upper": 0.7,
+          "n": 103,
+          "prediction": 0.654302688854412,
+          "observed": 0.7572815533980582
+        },
+        {
+          "lower": 0.7,
+          "upper": 0.8,
+          "n": 266,
+          "prediction": 0.7626420347090054,
+          "observed": 0.7819548872180451
+        },
+        {
+          "lower": 0.8,
+          "upper": 0.9,
+          "n": 65,
+          "prediction": 0.8307230419379014,
+          "observed": 0.7538461538461538
+        },
+        {
+          "lower": 0.9,
+          "upper": 1.0,
+          "n": 319,
+          "prediction": 0.9863224292997282,
+          "observed": 0.8683385579937304
+        }
+      ],
+      "thresholds": [
+        {
+          "threshold": 0.2,
+          "negative_players": 5894,
+          "flagged_negative_players": 342,
+          "negative_matches": 577,
+          "flagged_negative_matches": 139
+        },
+        {
+          "threshold": 0.5,
+          "negative_players": 5894,
+          "flagged_negative_players": 179,
+          "negative_matches": 577,
+          "flagged_negative_matches": 69
+        },
+        {
+          "threshold": 0.8,
+          "negative_players": 5894,
+          "flagged_negative_players": 58,
+          "negative_matches": 577,
+          "flagged_negative_matches": 35
+        }
+      ]
+    }
+  },
+  "coverage": {
+    "source_matches": 894,
+    "evaluated_matches": 860,
+    "source_player_match_rows": 8857,
+    "scored_player_match_rows": 6886,
+    "note": "Historical observed event participants; not a verified full roster. Unscored matches are abstentions, not correct negatives."
+  },
+  "review_retrieval": [
+    {
+      "k": 1,
+      "positive_matches": 317,
+      "positive_matches_retrieved": 270,
+      "tied_score_retrieval_lower": 265,
+      "tied_score_retrieval_upper": 274,
+      "tie_policy": "Ascending player ID for deterministic reporting; tie bounds also shown",
+      "selected_players": 860,
+      "selected_positive_players": 270
+    },
+    {
+      "k": 3,
+      "positive_matches": 317,
+      "positive_matches_retrieved": 288,
+      "tied_score_retrieval_lower": 281,
+      "tied_score_retrieval_upper": 290,
+      "tie_policy": "Ascending player ID for deterministic reporting; tie bounds also shown",
+      "selected_players": 2512,
+      "selected_positive_players": 667
+    },
+    {
+      "k": 5,
+      "positive_matches": 317,
+      "positive_matches_retrieved": 290,
+      "tied_score_retrieval_lower": 282,
+      "tied_score_retrieval_upper": 293,
+      "tie_policy": "Ascending player ID for deterministic reporting; tie bounds also shown",
+      "selected_players": 4039,
+      "selected_positive_players": 890
+    }
+  ],
+  "source_slices": {
+    "negative_source": {
+      "n": 4052,
+      "positive": 0,
+      "prevalence": 0.0,
+      "roc_auc": null,
+      "average_precision": null,
+      "brier": 0.05529683014829478,
+      "log_loss": 0.19543832769245836,
+      "ece_10_equal_width": 0.09590542327791715,
+      "reliability": [
+        {
+          "lower": 0.0,
+          "upper": 0.1,
+          "n": 3313,
+          "prediction": 0.018231752338422346,
+          "observed": 0.0
+        },
+        {
+          "lower": 0.1,
+          "upper": 0.2,
+          "n": 251,
+          "prediction": 0.13686623685507185,
+          "observed": 0.0
+        },
+        {
+          "lower": 0.2,
+          "upper": 0.3,
+          "n": 112,
+          "prediction": 0.24451877323112317,
+          "observed": 0.0
+        },
+        {
+          "lower": 0.3,
+          "upper": 0.4,
+          "n": 61,
+          "prediction": 0.3449978105357436,
+          "observed": 0.0
+        },
+        {
+          "lower": 0.4,
+          "upper": 0.5,
+          "n": 45,
+          "prediction": 0.4461427807807922,
+          "observed": 0.0
+        },
+        {
+          "lower": 0.5,
+          "upper": 0.6,
+          "n": 28,
+          "prediction": 0.5411189155919212,
+          "observed": 0.0
+        },
+        {
+          "lower": 0.6,
+          "upper": 0.7,
+          "n": 21,
+          "prediction": 0.6411820082437425,
+          "observed": 0.0
+        },
+        {
+          "lower": 0.7,
+          "upper": 0.8,
+          "n": 41,
+          "prediction": 0.7571447913239642,
+          "observed": 0.0
+        },
+        {
+          "lower": 0.8,
+          "upper": 0.9,
+          "n": 57,
+          "prediction": 0.8498088905685827,
+          "observed": 0.0
+        },
+        {
+          "lower": 0.9,
+          "upper": 1.0,
+          "n": 123,
+          "prediction": 0.9532354876277892,
+          "observed": 0.0
+        }
+      ]
+    },
+    "positive_source": {
+      "n": 1852,
+      "positive": 992,
+      "prevalence": 0.5356371490280778,
+      "roc_auc": 0.954246764816204,
+      "average_precision": 0.9633114946128656,
+      "brier": 0.08171509237205139,
+      "log_loss": 0.28201848311777444,
+      "ece_10_equal_width": 0.03952312591405784,
+      "reliability": [
+        {
+          "lower": 0.0,
+          "upper": 0.1,
+          "n": 613,
+          "prediction": 0.02669746954928207,
+          "observed": 0.05546492659053834
+        },
+        {
+          "lower": 0.1,
+          "upper": 0.2,
+          "n": 137,
+          "prediction": 0.1456940362814569,
+          "observed": 0.24817518248175183
+        },
+        {
+          "lower": 0.2,
+          "upper": 0.3,
+          "n": 81,
+          "prediction": 0.24373585169697987,
+          "observed": 0.25925925925925924
+        },
+        {
+          "lower": 0.3,
+          "upper": 0.4,
+          "n": 67,
+          "prediction": 0.3455853386601405,
+          "observed": 0.40298507462686567
+        },
+        {
+          "lower": 0.4,
+          "upper": 0.5,
+          "n": 33,
+          "prediction": 0.44490261872609455,
+          "observed": 0.5757575757575758
+        },
+        {
+          "lower": 0.5,
+          "upper": 0.6,
+          "n": 42,
+          "prediction": 0.5584060209138053,
+          "observed": 0.5476190476190477
+        },
+        {
+          "lower": 0.6,
+          "upper": 0.7,
+          "n": 39,
+          "prediction": 0.6559996345104315,
+          "observed": 0.7948717948717948
+        },
+        {
+          "lower": 0.7,
+          "upper": 0.8,
+          "n": 69,
+          "prediction": 0.7604458789894546,
+          "observed": 0.8405797101449275
+        },
+        {
+          "lower": 0.8,
+          "upper": 0.9,
+          "n": 163,
+          "prediction": 0.8613892629102695,
+          "observed": 0.8895705521472392
+        },
+        {
+          "lower": 0.9,
+          "upper": 1.0,
+          "n": 608,
+          "prediction": 0.960346681801112,
+          "observed": 0.9868421052631579
+        }
+      ]
+    },
+    "pro_assumed_negative": {
+      "n": 982,
+      "positive": 0,
+      "prevalence": 0.0,
+      "roc_auc": null,
+      "average_precision": null,
+      "brier": 0.03593924513910097,
+      "log_loss": 0.15056926353578998,
+      "ece_10_equal_width": 0.12351066780657377,
+      "reliability": [
+        {
+          "lower": 0.0,
+          "upper": 0.1,
+          "n": 591,
+          "prediction": 0.036103224641621405,
+          "observed": 0.0
+        },
+        {
+          "lower": 0.1,
+          "upper": 0.2,
+          "n": 189,
+          "prediction": 0.14513802721544547,
+          "observed": 0.0
+        },
+        {
+          "lower": 0.2,
+          "upper": 0.3,
+          "n": 96,
+          "prediction": 0.2468095376777152,
+          "observed": 0.0
+        },
+        {
+          "lower": 0.3,
+          "upper": 0.4,
+          "n": 36,
+          "prediction": 0.3424329592121972,
+          "observed": 0.0
+        },
+        {
+          "lower": 0.4,
+          "upper": 0.5,
+          "n": 35,
+          "prediction": 0.44103920459747314,
+          "observed": 0.0
+        },
+        {
+          "lower": 0.5,
+          "upper": 0.6,
+          "n": 19,
+          "prediction": 0.5373842904442235,
+          "observed": 0.0
+        },
+        {
+          "lower": 0.6,
+          "upper": 0.7,
+          "n": 9,
+          "prediction": 0.6294995811250474,
+          "observed": 0.0
+        },
+        {
+          "lower": 0.7,
+          "upper": 0.8,
+          "n": 6,
+          "prediction": 0.7181364496548971,
+          "observed": 0.0
+        },
+        {
+          "lower": 0.8,
+          "upper": 0.9,
+          "n": 1,
+          "prediction": 0.8770921230316162,
+          "observed": 0.0
+        }
+      ]
+    }
+  },
+  "raw_score_component_bootstrap_95": {
+    "average_precision": [
+      0.7467554160501161,
+      0.8447800139585155
+    ],
+    "roc_auc": [
+      0.9464381621338682,
+      0.9654930478012135
+    ],
+    "brier": [
+      0.05301722634594611,
+      0.06968931023660896
+    ]
+  },
+  "bootstrap_replicates": 200,
+  "seed": 20261014,
+  "limitations": [
+    "Source labels not independently adjudicated",
+    "Anonymous player identities cannot be joined across matches",
+    "Known-player grouping covers event participants; full roster verification remains required",
+    "Only three cache demos reconstructed; historical inputs retain incomplete original provenance",
+    "Historical dataset and hyperparameters have already informed model selection; internal evaluation only"
+  ],
+  "fold_seconds": [
+    202.15241649991367,
+    108.27957370004151,
+    88.87378459994216,
+    84.52188280003611,
+    86.19448750000447
+  ],
+  "schema": "nullcs.internal-benchmark.v1",
+  "date": "2026-10-14",
+  "configuration": {
+    "context_pre_ticks": 128,
+    "context_post_ticks": 16,
+    "observations": 32,
+    "channels": 35,
+    "player_features": 449,
+    "outer_folds": 5,
+    "cnn_crossfit_folds": 4,
+    "cnn_epochs": 4,
+    "cnn_fits": 25,
+    "xgb_fits": 5,
+    "calibration_fits": 5
+  },
+  "source_summary_sha256": "874f961559bf8fe0f8a4a1e38d6b75eac225be32405df97c3962059e7bfde97b",
+  "run_sha256": [
+    "550ba062534187fabd1eb8e55b061e88d614d03ed8838b01f34ab8db91a897e4",
+    "224fd4ef6d1fcbcdc0ae064628992936fb3d22699ec88155895545f8987f581c",
+    "be8a2ca09f357d0b90e755556f9e0eda18c994d30e8ab7560e0ef6deca0edd7a",
+    "2bbf80f2cdf2f97e60629d104731dbbcd23f3d1fc5b41d344bc0930a59d2bc95",
+    "5ea2d869ff19f661994a95480082f6490ba4b60096d52e997a7719957528bdf0"
+  ],
+  "production_model_replaced": false
+}

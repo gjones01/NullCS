@@ -37,6 +37,22 @@ def read_result(root: Path, job: str, filename: str) -> dict:
             calibrated_probability=finite(row.get('proba_calibrated')),
             confidence=finite(row.get('confidence'))))
     warnings = ['Beta research output. Review the match before drawing conclusions.']
+    if manifest.get('experimental_model'):
+        warnings.append('Experimental validation model; this is not the released production model.')
+    coverage = None
+    coverage_path = root / 'player_coverage.json'
+    if coverage_path.exists():
+        coverage = json.loads(coverage_path.read_text(encoding='utf8'))
+        scored_ids = {p['steamid'] for p in players}
+        if coverage.get('schema_version') != 'nullcs.coverage.v1' or {
+            p['steamid'] for p in coverage['participants'] if p['status'] == 'scored'
+        } != scored_ids:
+            raise ValueError('Mismatched player coverage')
+    else:
+        warnings.append('Participant coverage was not recorded for this analysis; the list contains scored players only.')
+    warnings.append('Calibrated estimates reflect the research sample, not a validated chance of cheating in this match.')
+    if trace.get('model_sha256') == 'f9016d95a144e1004f40c01f15b86879d9d9101cdda4659acaa261ac80610ea8':
+        warnings.append('Artifact audit: the released temporal checkpoint differs from the generator of this player model\'s training features. Historical evaluation does not validate the complete released pipeline.')
     if not trace.get('calibration_used'):
         warnings.append('Calibration is unavailable for this model; no calibrated estimate is shown.')
     log_path = root / 'logs' / 'pipeline.log'
@@ -47,7 +63,7 @@ def read_result(root: Path, job: str, filename: str) -> dict:
     if provenance.get('demoparser2_version') == '0.41.4':
         warnings.append('This parser version can retain stale input values in some demos, which may affect scores.')
     return dict(schema_version='nullcs.desktop.v1', job_id=job, filename=filename,
-        map_name=str(data['map_name'].iloc[0]), players=players, warnings=warnings,
+        map_name=str(data['map_name'].iloc[0]), players=players, warnings=warnings, coverage=coverage,
         model=dict(name=Path(str(trace.get('model_artifact_path', ''))).name,
                    sha256=trace.get('model_sha256'), calibration_used=bool(trace.get('calibration_used'))),
         parser_version=provenance.get('demoparser2_version'))

@@ -73,22 +73,27 @@ export default function AboutPage() {
         </div>
         <div>
           <p>
-            The existing public CS2CD benchmark reports 860 demos after
-            filtering, with 992 positive and 5,894 negative player-demo rows.
-            Retrieval figures refer to 293 demos containing a suspicious-player
-            label.
+            The corrected October 2026 internal evaluation scores 6,886
+            player-match records across 860 of 894 historical demos: 992
+            positive and 5,894 negative source labels. Matches, overlapping
+            windows, and known repeated-player groups stay together across folds.
           </p>
           <p>
-            Historical player-model out-of-fold predictions yield average
-            precision of 0.805 and ROC-AUC of 0.959. Threshold tables expose the
-            tradeoff between finding labeled cases and raising false alarms;
-            score distributions show where the labeled groups overlap.
+            Raw scores reach average precision of 0.797 and ROC-AUC of 0.957.
+            CNN training features are generated out of fold inside each outer
+            training partition; calibration uses a separate partition. Review
+            scores have average precision of 0.764 and ROC-AUC of 0.939.
           </p>
           <p>
-            These measurements describe this dataset and evaluation procedure.
-            They do not establish production accuracy on unseen CS2 patches,
-            skill distributions, or every type of behavioral anomaly.
+            The audit found mixed model generations in the released bundle.
+            The corrected research models remain experimental: calibration needs
+            further work, source labels are uncertain, and anonymized player IDs
+            prevent complete cross-match identity checks. Independent labeled
+            demos are still needed before making real-world accuracy claims.
           </p>
+          <a className="text-link" href={`${githubUrl}/blob/main/research/corrected_baseline_summary.json`} target="_blank" rel="noreferrer">
+            Read the measured results and limitations <ArrowUpRight size={16} />
+          </a>
         </div>
       </div>
       <div className="benchmark-strip">

@@ -327,6 +327,12 @@ def load_demo(demo_path: str | Path, demo_id: str) -> CS2CDMatch:
     damages = _damages_table(damages_raw, round_start_ticks)
     shots = _shots_table(shots_raw)
 
+    try:
+        participant_info = pd.DataFrame(parser.parse_player_info())
+    except Exception as exc:
+        print(f"[WARN] participant metadata unavailable; coverage uses ticks/events: {type(exc).__name__}")
+        participant_info = pd.DataFrame()
+
     return CS2CDMatch(
         split="infer",
         match_id=demo_id,
@@ -340,4 +346,5 @@ def load_demo(demo_path: str | Path, demo_id: str) -> CS2CDMatch:
         shots=shots,
         rounds=rounds,
         parser_provenance=provenance,
+        participant_info=participant_info,
     )

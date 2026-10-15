@@ -490,7 +490,7 @@ def _series_stats(series: pd.Series, low: float | None = None, high: float | Non
     }
 
 
-def build_encounter_row(g: pd.DataFrame) -> dict[str, object]:
+def build_encounter_row(g: pd.DataFrame, *, joint_only: bool = False) -> dict[str, object]:
     g = g.sort_values("start_tick")
     encounter_n = int(len(g))
 
@@ -502,7 +502,10 @@ def build_encounter_row(g: pd.DataFrame) -> dict[str, object]:
         "label": int(g["label"].iloc[0]),
         "enc_n": encounter_n,
     }
-    for source_col, cfg in ENCOUNTER_FEATURE_SPECS.items():
+    # The batch aggregator already calculates these marginal statistics in
+    # Polars and discards their pandas copies. Only the joint difficulty fields
+    # are needed by that caller; keep the full output for other callers.
+    for source_col, cfg in (() if joint_only else ENCOUNTER_FEATURE_SPECS.items()):
         if source_col not in g.columns:
             continue
         stats = _series_stats(g[source_col], cfg.get("low"), cfg.get("high"))
@@ -561,7 +564,12 @@ def build_encounter_row(g: pd.DataFrame) -> dict[str, object]:
 def aggregate_kill_and_encounter_frames(
     kill_df: pd.DataFrame,
     encounter_df: pd.DataFrame | None = None,
+    *,
+    shrinkage_fit_demo_ids: set[str] | None = None,
+    shrinkage_references: dict[str, float] | None = None,
 ) -> pd.DataFrame:
+    if shrinkage_fit_demo_ids is not None and shrinkage_references is not None:
+        raise ValueError("Supply fit demos or saved shrinkage references, not both")
     if isinstance(kill_df, pl.DataFrame):
         if kill_df.is_empty():
             return pd.DataFrame()
@@ -803,7 +811,7 @@ def aggregate_kill_and_encounter_frames(
                 if col not in encounter_pdf.columns:
                     encounter_pdf[col] = default
             encounter_pdf["attacker_steamid"] = encounter_pdf["attacker_steamid"].astype(str).str.strip()
-            joint_rows = [build_encounter_row(g) for _, g in encounter_pdf.groupby(key_cols, sort=False)]
+            joint_rows = [build_encounter_row(g, joint_only=True) for _, g in encounter_pdf.groupby(key_cols, sort=False)]
             joint_df = pd.DataFrame(joint_rows)
             if not joint_df.empty:
                 keep_cols = key_cols + [
@@ -936,10 +944,27 @@ def aggregate_kill_and_encounter_frames(
     agg["rt_iqr_80"] = agg["rt_p90"] - agg["rt_p10"]
     agg["dist_tail"] = agg["dist_p90"] - agg["dist_median"]
 
-    global_rt_median = float(agg["rt_median"].median(skipna=True))
-    global_rt_p10 = float(agg["rt_p10"].median(skipna=True))
-    global_rt_p90 = float(agg["rt_p90"].median(skipna=True))
-    global_dist_median = float(agg["dist_median"].median(skipna=True))
+    reference_columns = ("rt_median", "rt_p10", "rt_p90", "dist_median")
+    if shrinkage_references is not None:
+        if set(shrinkage_references) != set(reference_columns):
+            raise ValueError("Shrinkage reference schema mismatch")
+        references = {key: float(shrinkage_references[key]) for key in reference_columns}
+    else:
+        reference_rows = agg
+        if shrinkage_fit_demo_ids is not None:
+            requested = {str(d) for d in shrinkage_fit_demo_ids}
+            if not requested or not requested.issubset(set(agg.demo_id.astype(str))):
+                raise ValueError("Shrinkage fit demos are empty or absent after eligibility filtering")
+            reference_rows = agg[agg.demo_id.astype(str).isin(requested)]
+        references = {key: float(reference_rows[key].median(skipna=True)) for key in reference_columns}
+    if (shrinkage_references is not None or shrinkage_fit_demo_ids is not None) and not all(
+        math.isfinite(value) for value in references.values()
+    ):
+        raise ValueError("Corrected shrinkage references must be finite")
+    global_rt_median = references["rt_median"]
+    global_rt_p10 = references["rt_p10"]
+    global_rt_p90 = references["rt_p90"]
+    global_dist_median = references["dist_median"]
 
     agg["rt_median_shrunk"] = (agg["rt_median"] * agg["rt_n"] + global_rt_median * SHRINK_K) / (agg["rt_n"] + SHRINK_K)
     agg["rt_p10_shrunk"] = (agg["rt_p10"] * agg["rt_n"] + global_rt_p10 * SHRINK_K) / (agg["rt_n"] + SHRINK_K)
@@ -1096,6 +1121,10 @@ def aggregate_kill_and_encounter_frames(
     ]
     agg = agg.drop(columns=[c for c in helper_cols if c in agg.columns])
     agg.attrs["player_rows_before_min_kills"] = before_min_kills
+    agg.attrs["shrinkage_references"] = references
+    agg.attrs["shrinkage_semantics"] = (
+        "train-reference-v2" if shrinkage_fit_demo_ids is not None or shrinkage_references is not None else "legacy-v1"
+    )
     return agg
 
 

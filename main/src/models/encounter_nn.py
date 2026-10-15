@@ -630,7 +630,11 @@ def score_to_band(score: float) -> str:
     return "minimal"
 
 
-def aggregate_encounter_scores(scored: pd.DataFrame) -> pd.DataFrame:
+def aggregate_encounter_scores(scored: pd.DataFrame, *, semantics: str = "legacy-v1") -> pd.DataFrame:
+    # Existing weights were fitted with positional masks after score sorting.
+    # Corrected models must opt in explicitly; never change released inputs silently.
+    if semantics not in {"legacy-v1", "aligned-v2"}:
+        raise ValueError(f"Unknown encounter aggregation semantics: {semantics}")
     if scored.empty:
         return pd.DataFrame(
             columns=[
@@ -667,6 +671,8 @@ def aggregate_encounter_scores(scored: pd.DataFrame) -> pd.DataFrame:
         concentration = float(top3.sum() / total) if total > 0 else 0.0
         hard_mask = g["encounter_nn_hard"] >= 0.5
         low_vis_mask = g["encounter_nn_low_vis"] >= 0.5
+        aligned_scores = pd.to_numeric(g["encounter_nn_score"], errors="coerce").fillna(0.0)
+        conditional_scores = aligned_scores if semantics == "aligned-v2" else scores
         rows.append(
             {
                 "demo_id": str(demo_id),
@@ -679,8 +685,8 @@ def aggregate_encounter_scores(scored: pd.DataFrame) -> pd.DataFrame:
                 "enn_score_std": float(scores.std(ddof=0)) if len(scores) > 1 else 0.0,
                 "enn_high_rate": float((scores >= 0.6).mean()),
                 "enn_very_high_rate": float((scores >= 0.8).mean()),
-                "enn_hard_mean": float(scores[hard_mask.values].mean()) if hard_mask.any() else float(scores.mean()),
-                "enn_low_vis_mean": float(scores[low_vis_mask.values].mean()) if low_vis_mask.any() else float(scores.mean()),
+                "enn_hard_mean": float(conditional_scores[hard_mask.values].mean()) if hard_mask.any() else float(scores.mean()),
+                "enn_low_vis_mean": float(conditional_scores[low_vis_mask.values].mean()) if low_vis_mask.any() else float(scores.mean()),
                 "enn_kill_end_mean": float(scores[g["encounter_nn_kill_end"] >= 0.5].mean()) if (g["encounter_nn_kill_end"] >= 0.5).any() else float(scores.mean()),
                 "enn_score_concentration": concentration,
             }

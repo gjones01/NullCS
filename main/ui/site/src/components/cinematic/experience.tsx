@@ -431,9 +431,11 @@ export function CinematicExperience({ channels }: { channels: Channel[] }) {
             <em>certainty.</em>
           </h2>
           <p>
-            Grouped evaluation separates matches across folds. The published
-            benchmark measures ranking behavior within its dataset, not a
-            guarantee about your next match.
+            Five-fold internal evaluation keeps test groups out of every learned
+            stage, including CNN feature generation and calibration. These results
+            describe the corrected research baseline on historical source labels.
+            They do not validate the current desktop release or replace an
+            independent real-world test.
           </p>
         </div>
         <div className="benchmark-strip">
@@ -462,21 +464,21 @@ export function CinematicExperience({ channels }: { channels: Channel[] }) {
         </div>
         <details className="research-figures">
           <summary>
-            Open the benchmark figures <span>+</span>
+            Open the corrected internal benchmark figures <span>+</span>
           </summary>
           <div>
             {[
               {
-                src: "benchmark_top1_distribution.png",
-                title: "Distribution of top-ranked player signals",
+                src: "corrected-score-distributions.png",
+                title: "Corrected raw-score distributions",
               },
               {
-                src: "benchmark_top1_vs_top3_scatter.png",
-                title: "Top-1 and top-3 benchmark signals",
+                src: "corrected-review-retrieval.png",
+                title: "Review retrieval including unscored matches",
               },
               {
-                src: "control_path_bucket_boxplots.png",
-                title: "Encounter-model score distributions",
+                src: "corrected-calibration.png",
+                title: "Disjoint calibration evaluation",
               },
             ].map((plot) => (
               <figure key={plot.src}>
@@ -488,7 +490,7 @@ export function CinematicExperience({ channels }: { channels: Channel[] }) {
                   sizes="(max-width: 760px) 90vw, 45vw"
                 />
                 <figcaption>
-                  {plot.title} / existing research artifact
+                  {plot.title} / internal evaluation, October 2026
                 </figcaption>
               </figure>
             ))}
