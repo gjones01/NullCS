@@ -47,3 +47,53 @@ uncertainty or the effects of earlier development on this dataset.
 Read the [research notes](RESEARCH_VALIDATION.md) for the method, release decision
 and reproduction commands. The [full results](research/corrected_baseline_summary.json)
 contain metrics, counts and run hashes. No new production weights were released.
+
+## Calibration follow-up: October 15
+
+We compared raw scores, sigmoid calibration and isotonic calibration using the
+same frozen model predictions. Within each outer fold, three grouped splits of
+the calibration data selected the method by log loss. Test scores did not select
+the method. All five folds chose sigmoid.
+
+| Output | Log loss (lower is better) | Brier score (lower is better) |
+| --- | ---: | ---: |
+| Raw scores | 0.2123 | 0.0596 |
+| Isotonic calibration | 0.5758 | 0.0548 |
+| Selected sigmoid calibration | 0.1948 | 0.0551 |
+
+Sigmoid removed the exact zero/one errors seen with isotonic. It improved log loss
+over raw scores in three of five test folds, not every fold. Its pooled average
+precision was 0.779, compared with 0.797 for raw scores. Separate calibration
+functions can change score ordering between folds even when they preserve it
+within each fold. Calibration is not an across-the-board ranking improvement.
+
+At a fixed 0.5 cutoff, before the evidence adjustment:
+
+| Output | Negative-labeled records flagged / 5,894 | Positive-labeled records flagged / 992 |
+| --- | ---: | ---: |
+| Raw scores | 369 | 857 |
+| Isotonic calibration | 185 | 718 |
+| Selected sigmoid calibration | 170 | 691 |
+
+Fewer false positives come with more missed positives at this cutoff. These are
+source labels, not independently confirmed outcomes. The cutoff was fixed for
+comparison; it is not a newly recommended release threshold.
+
+In the professional-demo subset, sigmoid flagged 1 of 982 scored player-match
+records at 0.5, versus 35 for raw scores. Those 100 matches contain a large connected
+player group and assume legitimate play; this is a useful stress test, not proof
+of a real-world false-positive rate.
+
+After the existing evidence adjustment, sigmoid ranked a positively labeled player
+first in 270/317 matches and in the top three in 286/317. The previous isotonic
+review scores gave 270/317 and 288/317. Ties use player ID order. No thresholds or
+ranking rules were changed to improve these results.
+
+Coverage remains 6,886 of 8,857 observed player-match records, across 860 of 894
+matches. Missing scores are not counted as correct negative predictions.
+The follow-up reused previously inspected tests, so it is continued internal
+validation, not a fresh external benchmark. The suspected-player demo was not
+used for calibration selection. Production weights and the installer are unchanged.
+
+Full counts, per-fold results and the fixed comparison protocol are in
+[calibration results](research/calibration_validation_summary.json).

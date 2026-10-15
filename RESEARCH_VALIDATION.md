@@ -50,13 +50,17 @@ The new calibration produced exactly zero for 40 positive test records and exact
 one for 42 negative records. Its log loss got worse despite a better Brier score.
 We have not hidden those failures by clipping scores or tuning on test results.
 
-Next, calibration methods need comparison on development data, with rules set
-before testing. One successful suspected-player demo does not settle that decision.
+The October 15 follow-up compared methods on development data. All five folds
+selected sigmoid calibration, which improved test log loss and removed those exact
+zero/one errors. It also missed more positive records at a fixed 0.5 cutoff than
+isotonic did. See [the comparison](RESULTS.md#calibration-follow-up-october-15).
+This is a better candidate for further testing, not a newly released model.
 The existing desktop model and installer remain unchanged.
 
 ## Checks and performance
 
-- The API/research suite passed 95 tests, including the calibration-input guard.
+- The API/research suite passed 99 tests, including calibration input selection,
+  grouped method selection, label isolation and false-positive denominators.
 - The full patch-14153 parser check passed, including required model columns.
 - Repeating one training fold produced identical CNN weights and predictions on
   this machine. This is not a guarantee across hardware or library versions.
@@ -90,6 +94,7 @@ python main/scripts/train_corrected_baseline.py --input <input-dir> --output <fo
 # Repeat for folds 1 through 4, each in a new output directory.
 python main/scripts/summarize_corrected_baseline.py --input <input-dir> --folds <fold0> <fold1> <fold2> <fold3> <fold4> --output <summary.json>
 python main/scripts/check_corrected_reproducibility.py --first <fold0> --repeat <repeat-fold0> --output <check.json>
+python main/scripts/validate_calibration.py --input <input-dir> --folds <fold0> <fold1> <fold2> <fold3> <fold4> --output <new-calibration-dir>
 ```
 
 Run manifests record source hashes, model hashes, settings and group assignments.
